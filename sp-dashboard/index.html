@@ -36,19 +36,6 @@
       gap: var(--s3, 1.5rem);
     }
     
-    .week-start-footer {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-    .week-start-footer label {
-      font-size: 0.75rem;
-      color: var(--text-color-muted, #9e9e9e);
-    }
-    
     select, input[type="date"] {
       background: transparent;
       color: var(--text-color, #fff);
@@ -88,8 +75,13 @@
     .view-tab { background: none; border: none; color: var(--text-color-muted, #9e9e9e); font-size: 0.85rem; font-weight: 600; padding: 0.75rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
     .view-tab:hover { color: var(--text-color, #fff); }
     .view-tab.active { color: var(--text-color, #fff); border-bottom-color: var(--c-primary, #03a9f4); }
-    /* --- SHARED FOOTER --- */
-    .app-footer { flex: 0 0 auto; border-top: 1px solid var(--divider-color, #333); padding: 0.4rem var(--s3, 1.5rem); }
+    .view-tab-settings { margin-left: auto; }
+
+    /* --- SETTINGS VIEW --- */
+    .settings-fields { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .setting-field { display: flex; align-items: center; gap: 0.5rem; }
+    .setting-field label { font-size: 0.8rem; color: var(--text-color-muted, #9e9e9e); }
+    .setting-field select { background: var(--bg, #121212); color: var(--text-color, #fff); border: 1px solid var(--divider-color, #333); border-radius: 0.25rem; padding: 0.3rem 0.5rem; font-size: 0.8rem; }
 
     /* --- DASHBOARD GRID --- */
     /* --- STATS ROW --- */
@@ -263,13 +255,7 @@
     .group-proj b { color: var(--text-color, #fff); font-weight: 600; }
     .group-empty { font-size: 0.85rem; color: var(--text-color-muted, #9e9e9e); }
 
-    /* --- MODAL --- */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
-    .modal-panel { background: var(--card-bg, #1e1e1e); border: 1px solid var(--divider-color, #333); border-radius: var(--card-border-radius, 8px); box-shadow: var(--whiteframe-shadow-2dp, 0 2px 4px rgba(0,0,0,0.1)); width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; padding: var(--s3, 1.5rem); }
-    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2, 1rem); }
-    .modal-head h3 { margin: 0; font-size: 1.1rem; }
-    .modal-close { background: none; border: none; color: var(--text-color-muted, #9e9e9e); font-size: 1.4rem; line-height: 1; cursor: pointer; }
-    .modal-close:hover { color: var(--text-color, #fff); }
+    /* --- GROUP EDITORS (Settings view) --- */
     .modal-section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-color-muted, #9e9e9e); font-weight: 700; margin: 1rem 0 0.5rem; }
     .group-editor-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
     .group-editor-row .ge-name { flex: 1; min-width: 0; }
@@ -297,6 +283,7 @@
       <div class="view-tabs">
         <button class="view-tab active" id="tab-today">Today</button>
         <button class="view-tab" id="tab-retro">Retrospective</button>
+        <button class="view-tab view-tab-settings" id="tab-settings">&#9881; Settings</button>
       </div>
 
       <!-- ========================================== -->
@@ -441,50 +428,53 @@
         </div>
       </div>
 
-      <!-- Shared settings footer -->
-      <div class="app-footer">
-        <div class="week-start-footer">
-          <label for="wind-down-hour">Wind down at</label>
-          <select id="wind-down-hour">
-            <option value="">Off</option>
-            <option value="15">3 PM</option>
-            <option value="16">4 PM</option>
-            <option value="17">5 PM</option>
-            <option value="18">6 PM</option>
-            <option value="19">7 PM</option>
-            <option value="20">8 PM</option>
-            <option value="21">9 PM</option>
-            <option value="22">10 PM</option>
-          </select>
-          <span style="margin-left: 0.75rem;"></span>
-          <label for="week-start-day">Week starts on</label>
-          <select id="week-start-day">
-            <option value="1">Monday</option>
-            <option value="2">Tuesday</option>
-            <option value="3">Wednesday</option>
-            <option value="4">Thursday</option>
-            <option value="5">Friday</option>
-            <option value="6">Saturday</option>
-            <option value="0">Sunday</option>
-          </select>
+      <!-- ========================================== -->
+      <!-- VIEW 3: SETTINGS (configure)               -->
+      <!-- ========================================== -->
+      <div id="view-settings" class="view-content hidden">
+
+        <div class="project-hours-section">
+          <h3 class="section-title">Preferences</h3>
+          <div class="settings-fields">
+            <div class="setting-field">
+              <label for="wind-down-hour">Wind down at</label>
+              <select id="wind-down-hour">
+                <option value="">Off</option>
+                <option value="15">3 PM</option>
+                <option value="16">4 PM</option>
+                <option value="17">5 PM</option>
+                <option value="18">6 PM</option>
+                <option value="19">7 PM</option>
+                <option value="20">8 PM</option>
+                <option value="21">9 PM</option>
+                <option value="22">10 PM</option>
+              </select>
+            </div>
+            <div class="setting-field">
+              <label for="week-start-day">Week starts on</label>
+              <select id="week-start-day">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="0">Sunday</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-hours-section">
+          <h3 class="section-title">Groups</h3>
+          <div class="modal-section-title">Groups &amp; goals (hours)</div>
+          <div id="group-editors"></div>
+          <button class="btn-primary" id="add-group-btn">+ New group</button>
+          <div class="modal-section-title">Project assignment</div>
+          <div id="assign-list"></div>
         </div>
       </div>
 
-    </div>
-  </div>
-
-  <!-- Manage Groups Modal -->
-  <div class="modal-overlay hidden" id="groups-modal">
-    <div class="modal-panel">
-      <div class="modal-head">
-        <h3>Manage Groups</h3>
-        <button class="modal-close" id="groups-modal-close" aria-label="Close">&#10005;</button>
-      </div>
-      <div class="modal-section-title">Groups &amp; goals (hours)</div>
-      <div id="group-editors"></div>
-      <button class="btn-primary" id="add-group-btn">+ New group</button>
-      <div class="modal-section-title">Project assignment</div>
-      <div id="assign-list"></div>
     </div>
   </div>
 
@@ -608,21 +598,29 @@
       if (isOpen) renderHeatmap();
     });
 
-    // --- View tabs (Today / Retrospective) ---
+    // --- View tabs (Today / Retrospective / Settings) ---
+    const VIEWS = {
+      today:    { view: 'view-today',    tab: 'tab-today' },
+      retro:    { view: 'view-retro',    tab: 'tab-retro' },
+      settings: { view: 'view-settings', tab: 'tab-settings' },
+    };
     const setActiveView = (name) => {
-      const isToday = name !== 'retro';
-      document.getElementById('view-today').classList.toggle('hidden', !isToday);
-      document.getElementById('view-retro').classList.toggle('hidden', isToday);
-      document.getElementById('tab-today').classList.toggle('active', isToday);
-      document.getElementById('tab-retro').classList.toggle('active', !isToday);
-      localStorage.setItem('sp-dashboard-active-view', isToday ? 'today' : 'retro');
+      const active = VIEWS[name] ? name : 'today';
+      for (const [key, ids] of Object.entries(VIEWS)) {
+        document.getElementById(ids.view).classList.toggle('hidden', key !== active);
+        document.getElementById(ids.tab).classList.toggle('active', key === active);
+      }
+      localStorage.setItem('sp-dashboard-active-view', active);
       // When Retrospective becomes visible its containers finally have real
       // width, so re-render the charts that depend on measured dimensions.
-      if (!isToday) { try { updateBarChart(); renderHeatmap(); } catch (e) {} }
+      if (active === 'retro') { try { updateBarChart(); renderHeatmap(); } catch (e) {} }
+      if (active === 'settings') { try { renderGroupsSettings(); } catch (e) {} }
     };
     document.getElementById('tab-today').addEventListener('click', () => setActiveView('today'));
     document.getElementById('tab-retro').addEventListener('click', () => setActiveView('retro'));
-    if (localStorage.getItem('sp-dashboard-active-view') === 'retro') setActiveView('retro');
+    document.getElementById('tab-settings').addEventListener('click', () => setActiveView('settings'));
+    const savedView = localStorage.getItem('sp-dashboard-active-view');
+    if (savedView && savedView !== 'today') setActiveView(savedView);
 
     // Wind-down hour setting
     const windDownSelect = document.getElementById('wind-down-hour');
@@ -912,7 +910,7 @@
         const del = row.querySelector('[data-action="delete"]');
         if (del) del.addEventListener('click', () => {
           saveGroups(loadGroups().filter(x => x.id !== id));
-          renderGroupsModal();
+          renderGroupsSettings();
           persistAndRefresh();
         });
       });
@@ -925,13 +923,13 @@
           const target = groups.find(g => g.id === sel.value);
           if (target) target.projectIds.push(pid);
           saveGroups(groups);
-          renderGroupsModal();
+          renderGroupsSettings();
           persistAndRefresh();
         });
       });
     };
 
-    const renderGroupsModal = () => {
+    const renderGroupsSettings = () => {
       const groups = loadGroups();
       const editors = document.getElementById('group-editors');
       const assign = document.getElementById('assign-list');
@@ -964,19 +962,15 @@
       attachModalListeners();
     };
 
-    const openGroupsModal = () => { renderGroupsModal(); document.getElementById('groups-modal').classList.remove('hidden'); };
-    const closeGroupsModal = () => document.getElementById('groups-modal').classList.add('hidden');
-    document.getElementById('manage-groups-btn').addEventListener('click', openGroupsModal);
-    document.getElementById('groups-modal-close').addEventListener('click', closeGroupsModal);
-    document.getElementById('groups-modal').addEventListener('click', (e) => { if (e.target.id === 'groups-modal') closeGroupsModal(); });
+    // "Manage Groups" from the Today view jumps to the Settings view.
+    document.getElementById('manage-groups-btn').addEventListener('click', () => setActiveView('settings'));
     document.getElementById('add-group-btn').addEventListener('click', () => {
       const groups = loadGroups();
       groups.push({ id: genGroupId(), name: 'New Group', weeklyGoalH: 0, dailyGoalH: 0, projectIds: [], color: groupColorForIndex(groups.length) });
       saveGroups(groups);
-      renderGroupsModal();
+      renderGroupsSettings();
       persistAndRefresh();
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGroupsModal(); });
 
     // --- RETROSPECTIVE view: "This Week in Review" summary (always rendered) ---
     const renderWeekInReview = (metrics) => {
@@ -1190,6 +1184,11 @@
       renderAllTimeHours();
       renderWindDownBanner();
       renderHeatmap();
+      // Keep the Settings groups in sync on refresh, but don't clobber an
+      // in-progress edit (the periodic refresh would otherwise steal focus).
+      const settingsVisible = !document.getElementById('view-settings').classList.contains('hidden');
+      const editingSettings = document.getElementById('view-settings').contains(document.activeElement);
+      if (settingsVisible && !editingSettings) renderGroupsSettings();
     };
 
     const updateBarChart = () => {
