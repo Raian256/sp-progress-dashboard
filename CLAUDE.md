@@ -8,6 +8,8 @@ A dashboard plugin for [Super Productivity](https://super-productivity.com) buil
 
 Three tab views: **Today** (the centrepiece), **Retrospective** (bar chart, activity heatmap, group allocation, weekly review), and **Settings** (preferences + group/goal management). The **Today** view has two modes that swap automatically on tracking state — an idle **Launchpad** and a **Focus** engine (see Architecture). The README is the product-level explanation of the design goals; this file is the technical one.
 
+**Host API reference:** Super Productivity's plugin API and hooks are documented at <https://github.com/super-productivity/super-productivity/blob/master/docs/plugin-development.md> (the authoritative TypeScript interfaces are in the repo's `packages/plugin-api/src/types.ts`). Consult these before using an unfamiliar `PluginAPI` method or `PluginAPI.Hooks.*` — the docs can lag the types.
+
 ## Commands
 
 ```bash
