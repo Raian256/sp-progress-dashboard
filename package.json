@@ -9,7 +9,8 @@
     "test:coverage": "vitest run --coverage",
     "build:min": "./scripts/minify.sh sp-dashboard",
     "check:syntax": "node scripts/check-js.js",
-    "screenshot": "node scripts/screenshot.js"
+    "screenshot": "node scripts/screenshot.js",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^1.0.4",

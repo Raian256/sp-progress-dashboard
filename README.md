@@ -1,103 +1,51 @@
-# Study Dashboard — Super Productivity Plugin
+# Progress Dashboard
 
-A personal study-time tracking dashboard built as a plugin for [Super Productivity](https://super-productivity.com). It gives a weekly overview of time spent studying, with configurable daily and weekly goals, progress tracking, and per-project breakdowns — all in a single self-contained HTML file with no external dependencies.
-
----
-
-## Features
-
-- **Weekly time tracking** with configurable week start day
-- **Daily and weekly goals** with prorated progress bars and ahead/behind indicators
-- **Period comparisons** showing hour diffs vs. previous week / yesterday
-- **Time Tracked chart** — bar chart with Last 7 Days / 30 Days / 8 Weeks / 12 Months views
-- **Project Breakdown** — pie chart showing time distribution across projects
-- **Per-project hour cards** with weekly goal percentages and lifetime totals
-- Native charts rendered with vanilla JS and CSS (no charting libraries)
-- Light/dark theme support matching Super Productivity
-- Live updates when task data changes in the host app
-- Fallback mock data for standalone development
+A [Super Productivity](https://super-productivity.com) plugin that helps you make steady, visible progress across your projects — measured in hours invested, and built for a brain that finds *starting* and *switching* hard.
 
 ---
 
-## Project Structure
+## What it's for
 
-```
-sp-dashboard/
-├── index.html              # Main UI (CSS + JS embedded)
-├── manifest.json.template  # Template used at build time
-├── plugin.js               # Super Productivity integration script
-└── icon.svg                # Plugin icon
+Most trackers tell you what you did. That's a poor motivator when the hard part is executive function — starting a session, feeling time pass, not collapsing into "I'm too far behind to bother."
 
-tests/
-└── index.test.js           # Vitest/JSDOM unit tests
+This dashboard is built for that brain (ADHD / autism). Its job is to help you put in **steady hours across several areas of work, day after day**, without nagging, shame, or a wall of red.
 
-scripts/
-├── minify.sh               # HTML minifier
-├── screenshot.js           # Puppeteer screenshot generator
-└── check-js.js             # Syntax checker
+## The idea: an instrument, not a coach
 
-Makefile                    # Build & release helpers
-package.json                # Node tooling and dependencies
-```
+It never tells you what to do. There's no "work on this now," no guilt, no manufactured urgency. Deciding what to switch to is exactly the expensive part, so it doesn't guess for you — a wrong nudge costs more than none.
 
-> All plugin logic resides in a single HTML file to conform with the host app's plugin sandbox.
+Instead it does three quiet things: makes where you stand **legible in a glance**, makes the passing day **something you can feel**, and — once you start — **protects and rewards the session** you're in. Deep focus and a reluctance to switch are treated as strengths to guard, not habits to break.
 
----
+## How it works: two modes
 
-## Installation
+The **Today** view is one of two screens, depending on whether a timer is running. You never choose — it follows what you're already doing.
 
-1. Download the latest [Release](https://github.com/dougcooper/sp-dashboard/releases)
-2. Open Super Productivity → Settings → Plugins
-3. Click "Load Plugin from Folder"
-4. Select the `sp-dashboard` zip file
+### Launchpad — when you're deciding
 
----
+![The Launchpad](screenshots/01-idle.png)
 
-## Development
+The usable day is drawn as a bar that empties toward your wind-down time, so "time left" is something you see, not just a number. Below it, a streak of recent days; then calm **lanes** (your grouped areas of work) showing today against a daily goal. Only the lane you're furthest behind on gets a quiet accent — everything else stays quiet. No decision is made for you; the point is to make *your* decision fast.
 
-### Prerequisites
+### Focus — when you're working
 
-- Node.js (18+) and npm
-- `make` available (macOS/Linux)
+![The Focus engine](screenshots/06-focus.png)
 
-### Install dependencies
+Start a timer and everything collapses to one thing: a ring closing that lane's goal for the day, filling as you work. A shrinking "time to close the goal," how deep you are into the session, and a small gauge of the day left. Hit the goal and it says *keep rolling*, never *stop* — the aim is depth, not clocking out.
 
-```bash
-npm install
-```
+## Calm by design
 
-### Running tests
+![The day running out](screenshots/02-idle-squeeze.png)
 
-```bash
-npm test
-make test
-```
+One focal point at a time, a stable layout that never rearranges, and motion you can switch off. Colour carries meaning sparingly: the single warm cue appears only when the day is genuinely running out — so it still means something when it does.
 
-### Building for release
+## Every state
 
-```bash
-make build       # minifies and zips into build/sp-dashboard
-make release     # build + tag + GitHub release (requires gh CLI)
-```
+The screenshots above are the gist. The rest — goal met, day over, an unplanned session, the weekly retrospective, and settings — live in [`screenshots/`](screenshots/).
 
-### Updating screenshots
+## Install
 
-```bash
-npm run screenshot   # outputs to assets/
-```
+Download the latest [release](https://github.com/dougcooper/sp-dashboard/releases), then in Super Productivity go to **Settings → Plugins → Load Plugin from Folder** and pick the zip.
 
 ---
 
-## How It Works
-
-- `plugin.js` runs in the host app and listens for Redux `ACTION` hooks, posting `SP_STATE_CHANGED` messages to the iframe
-- `index.html` receives these messages and pulls task/project data via `PluginAPI`
-- All date calculations use local timezone; the week range is determined by the user-selected start day
-- Goals and UI preferences are persisted in `localStorage`
-- When opened standalone (no `PluginAPI`), mock data is loaded for development
-
----
-
-## License
-
-MIT
+Everything runs inside Super Productivity as a single self-contained file, with no external dependencies. Development and build notes live in [`CLAUDE.md`](CLAUDE.md).

@@ -270,6 +270,112 @@
     .assign-row .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
     .modal-select { background: var(--bg, #121212); color: var(--text-color, #fff); border: 1px solid var(--divider-color, #333); border-radius: 0.25rem; padding: 0.3rem 0.5rem; font-size: 0.8rem; flex: 0 0 auto; width: 10rem; max-width: 45%; }
     .btn-primary { background: var(--c-primary, #03a9f4); color: #fff; border: none; border-radius: var(--card-border-radius, 8px); padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; margin-top: 0.5rem; }
+
+    /* ====================================================================== */
+    /* TODAY VIEW — AuDHD-tuned: calm, low-noise, one focal point per mode.    */
+    /* Near-zero red (threat/shame; ADHD habituates). Amber only for a real    */
+    /* time squeeze. Stable positions, tabular numbers, reduced-motion aware.  */
+    /* Scoped under #view-today so Retrospective / Settings keep their look.   */
+    /* ====================================================================== */
+    #view-today {
+      --td-surface: var(--bg, #121212);
+      --td-line: var(--divider-color, #2e2e2e);
+      --td-ink: var(--text-color, #f4f4f5);
+      --td-muted: var(--text-color-muted, #9aa0a6);
+      --td-track: rgba(150, 150, 150, 0.16);
+      --td-go: #56c8a6;                       /* calm teal-green = progress */
+      --td-go-soft: rgba(86, 200, 166, 0.16);
+      --td-warn: #e0a458;                     /* muted amber = time squeeze */
+      --td-radius: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+    #view-today .td-focus.hidden, #view-today .td-idle.hidden { display: none; }
+
+    /* --- Day runway (idle hero) --- */
+    .runway { background: var(--td-surface); border: 1px solid var(--td-line); border-radius: var(--td-radius); padding: 1.25rem 1.35rem; }
+    .runway-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+    .runway-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--td-muted); margin-bottom: 0.3rem; }
+    .runway-big { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
+    .runway-big .u { font-size: 1.05rem; font-weight: 600; color: var(--td-muted); margin-left: 0.15rem; }
+    .runway-need { font-size: 0.9rem; color: var(--td-muted); text-align: right; }
+    .runway-need b { color: var(--td-ink); font-weight: 600; }
+    .runway-need.squeeze, .runway-need.squeeze b { color: var(--td-warn); }
+    .runway-need.met, .runway-need.met b { color: var(--td-go); }
+    /* Thin day-timeline: the usable day depleting toward wind-down (distinct from
+       the thicker goal-progress bar below it). Green = time still left. */
+    .runway-day { position: relative; height: 6px; border-radius: 4px; background: var(--td-track); overflow: hidden; margin: 0.55rem 0 0.3rem; }
+    .runway-day-left { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 4px; background: linear-gradient(90deg, rgba(86,200,166,0.3), rgba(86,200,166,0.6)); transition: width 0.6s ease; }
+    .runway-day-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--td-ink); opacity: 0.55; transition: left 0.6s ease; }
+    .runway-day-caption { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--td-muted); margin-bottom: 0.7rem; }
+    .runway-bar-label { font-size: 0.68rem; color: var(--td-muted); margin-bottom: 0.3rem; }
+    .runway-bar { position: relative; height: 14px; border-radius: 8px; background: var(--td-track); overflow: hidden; }
+    .runway-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: var(--td-go-soft); transition: width 0.6s ease; }
+    .runway-need-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: linear-gradient(90deg, rgba(224,164,88,0.35), rgba(224,164,88,0.6)); transition: width 0.6s ease; }
+    .runway-need-fill.calm { background: linear-gradient(90deg, rgba(86,200,166,0.4), rgba(86,200,166,0.7)); }
+
+    /* --- Lanes --- */
+    .lanes-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 1.6rem 0 0.85rem; }
+    .lanes-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--td-muted); margin: 0; font-weight: 700; }
+    .lanes-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .lane { background: var(--td-surface); border: 1px solid var(--td-line); border-left: 3px solid var(--td-line); border-radius: 12px; padding: 0.85rem 1rem; transition: border-color 0.3s ease; }
+    .lane.slipping { border-left-color: var(--lane-color, var(--td-warn)); }
+    .lane-head { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.55rem; }
+    .lane-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lane-color, var(--td-muted)); flex: 0 0 auto; }
+    .lane-name { font-weight: 600; font-size: 0.95rem; color: var(--td-ink); }
+    .lane-val { margin-left: auto; font-size: 0.9rem; color: var(--td-muted); white-space: nowrap; }
+    .lane-val b { color: var(--td-ink); font-weight: 700; }
+    .lane-track { height: 8px; border-radius: 5px; background: var(--td-track); overflow: hidden; }
+    .lane-fill { height: 100%; border-radius: 5px; background: var(--td-go-soft); transition: width 0.5s ease; }
+    .lane-fill.filled { background: var(--td-go); }
+    .lane-sub { margin-top: 0.5rem; font-size: 0.75rem; color: var(--td-muted); }
+    .lane-empty { color: var(--td-muted); font-size: 0.9rem; padding: 0.5rem 0.2rem; }
+
+    /* --- Momentum strip --- */
+    .momentum { margin-top: 1.7rem; display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
+    .momentum-cells { display: flex; gap: 4px; }
+    .mom-cell { width: 15px; height: 15px; border-radius: 4px; background: var(--td-track); }
+    .mom-cell.hit { background: var(--td-go); }
+    .mom-cell.today { background: transparent; box-shadow: inset 0 0 0 2px var(--td-go); }
+    .momentum-label { font-size: 0.85rem; color: var(--td-muted); }
+    .momentum-label b { color: var(--td-ink); font-weight: 700; }
+
+    /* --- Focus mode (Engine) --- */
+    .td-focus { --focus-color: var(--td-go); display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0.5rem 1rem 1rem; }
+    .focus-eyebrow { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.11em; color: var(--td-muted); }
+    .focus-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--focus-color); animation: td-pulse 2.4s ease-in-out infinite; }
+    .focus-task { font-size: 1.05rem; color: var(--td-ink); margin-top: 0.35rem; font-weight: 600; max-width: 32ch; }
+    .focus-proj { font-size: 0.85rem; color: var(--td-muted); margin-top: 0.1rem; }
+    .focus-ring-wrap { position: relative; width: min(240px, 68vw); aspect-ratio: 1; margin: 1.3rem 0 0.8rem; }
+    .focus-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .focus-ring-track { fill: none; stroke: var(--td-track); stroke-width: 14; }
+    .focus-ring-fill { fill: none; stroke: var(--focus-color); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 0.9s ease; }
+    .focus-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; }
+    .focus-big { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+    .focus-goalline { font-size: 0.9rem; color: var(--td-muted); }
+    .focus-countdown { margin-top: 0.6rem; font-size: 1.1rem; font-weight: 700; color: var(--focus-color); }
+    .focus-countdown.met { color: var(--td-go); }
+    .focus-depth { margin-top: 0.4rem; font-size: 0.85rem; color: var(--td-muted); }
+    .focus-depth b { color: var(--td-ink); font-weight: 600; }
+    .focus-runway { margin-top: 0.15rem; font-size: 0.8rem; color: var(--td-muted); opacity: 0.85; }
+    .focus-day { position: relative; width: min(220px, 55%); height: 4px; margin: 0.4rem auto 0; border-radius: 3px; background: var(--td-track); overflow: hidden; opacity: 0.85; }
+    .focus-day-left { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(86,200,166,0.3), rgba(86,200,166,0.55)); transition: width 0.6s ease; }
+    .focus-day-now { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--td-ink); opacity: 0.4; transition: left 0.6s ease; }
+    .focus-others { margin-top: 1.6rem; width: 100%; }
+    .focus-others summary { cursor: pointer; list-style: none; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--td-muted); padding: 0.5rem 0; text-align: left; }
+    .focus-others summary::-webkit-details-marker { display: none; }
+    .focus-others summary:hover { color: var(--td-ink); }
+    .focus-others[open] summary { margin-bottom: 0.6rem; }
+    .focus-mini { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; }
+    .focus-mini .lane-dot { width: 8px; height: 8px; }
+    .focus-mini-name { font-size: 0.85rem; color: var(--td-muted); min-width: 6rem; }
+    .focus-mini-track { flex: 1; height: 6px; border-radius: 4px; background: var(--td-track); overflow: hidden; }
+    .focus-mini-fill { height: 100%; border-radius: 4px; background: var(--td-go-soft); }
+    .focus-mini-val { font-size: 0.78rem; color: var(--td-muted); white-space: nowrap; }
+
+    @keyframes td-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @media (prefers-reduced-motion: reduce) {
+      #view-today * { transition: none !important; animation: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -294,54 +400,24 @@
         <!-- Wind-down Banner -->
         <div class="wind-down-banner" id="wind-down-banner"></div>
 
-        <!-- Stats Row -->
-        <div class="stats-row">
+        <!-- FOCUS mode: rendered only while a task is being tracked. -->
+        <section id="td-focus" class="td-focus hidden" aria-live="polite"></section>
 
-          <div class="stat-card">
-            <div class="stat-header">
-              <h3 class="stat-title">This Week</h3>
-              <div class="stat-icon" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-            </div>
-            <div class="goal-sub" id="goal-period-label"></div>
-            <div class="stat-value-container">
-              <span class="stat-value" id="stat-time">0h 0m</span>
-              <span class="comparison neutral" id="stat-time-cmp" title="vs best of last 4 weeks"></span>
-            </div>
-            <div class="goal-pct" id="stat-time-pct"></div>
-            <div class="deficit-indicator" id="stat-time-deficit"></div>
-            <div class="urgency-line" id="stat-time-pace"></div>
-            <div class="progress-track">
-              <div class="progress-fill progress-fill-gradient" id="stat-time-progress" style="width: 0%"></div>
-            </div>
-          </div>
+        <!-- IDLE mode: the Launchpad. -->
+        <section id="td-idle" class="td-idle">
 
-          <div class="stat-card">
-            <div class="stat-header">
-              <h3 class="stat-title">Today</h3>
-              <div class="stat-icon" style="background: rgba(74, 222, 128, 0.1); color: #4ade80;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-            </div>
-            <div class="goal-sub" id="goal-today-label"></div>
-            <div class="stat-value-container">
-              <span class="stat-value" id="stat-today-time">0h 0m</span>
-              <span class="comparison neutral" id="stat-today-cmp"></span>
-            </div>
-            <div class="goal-pct" id="stat-today-pct"></div>
-            <div class="urgency-line" id="stat-today-left"></div>
-            <div class="progress-track">
-              <div class="progress-fill progress-fill-gradient" id="stat-today-progress" style="width: 0%"></div>
-            </div>
-          </div>
+          <!-- The day, drawn as a depleting runway. -->
+          <div id="runway" class="runway"></div>
 
-        </div>
+          <!-- Momentum: recent days at a glance, right under the day. -->
+          <div id="momentum" class="momentum"></div>
 
-        <!-- Group status (weekly + daily progress per group) -->
-        <div class="project-hours-section">
-          <div class="groups-header">
-            <h3 class="section-title" style="margin:0">Groups</h3>
+          <div class="lanes-head">
+            <h3 class="lanes-title">Lanes</h3>
             <button class="btn-ghost" id="manage-groups-btn">&#9881; Manage Groups</button>
           </div>
-          <div id="group-status-list"></div>
-        </div>
+          <div id="lanes-list" class="lanes-list"></div>
+        </section>
       </div>
 
       <!-- ========================================== -->
@@ -749,71 +825,336 @@
       return stats;
     };
 
-    // --- TODAY view: per-group status blocks (most-behind first) ---
-    const renderTodayGroups = () => {
-      const list = document.getElementById('group-status-list');
-      if (!list) return;
-      const stats = computeGroupStats(latestMetrics);
-      const projectData = (latestMetrics && latestMetrics.projectData) || {};
+    // ====================================================================
+    // TODAY VIEW: Idle (Launchpad) <-> Focus (Engine), driven by tracking.
+    // ====================================================================
 
-      const allTitles = [];
-      stats.forEach(s => s.projectTitles.forEach(t => { if (!allTitles.includes(t)) allTitles.push(t); }));
-      const colors = buildProjectColorMap(allTitles);
+    // Tracking state. The host's CURRENT_TASK_CHANGE hook (plugin.js) is the
+    // authoritative source; a time-delta fallback covers older SP builds and
+    // mid-session reloads. The dashboard only observes — it never starts/stops.
+    let trackingCurrent = null;    // the actively-tracked Task, or null
+    let trackingViaHook = false;   // true once the hook has spoken (trusted)
+    let focusSessionStart = null;  // wall-clock ms this focus session began
+    let focusTimer = null;         // 1s cosmetic ticker while in Focus
+    let focusState = null;         // { baseTodayMs, goalMs, groupName, color }
+    let lastPullWall = Date.now(); // last data pull, for live extrapolation
+    let prevTodayByTaskId = null;  // for the delta fallback
 
-      // Order: groups with a weekly goal first (most hours behind first),
-      // then goal-less groups, then Ungrouped last.
-      const withGoal = stats.filter(s => !s.isUngrouped && s.weeklyGoalMs > 0)
-        .sort((a, b) => (b.proratedGoalMs - b.weeklyMs) - (a.proratedGoalMs - a.weeklyMs));
-      const noGoal = stats.filter(s => !s.isUngrouped && s.weeklyGoalMs <= 0);
-      const ungrouped = stats.filter(s => s.isUngrouped);
-      const ordered = withGoal.concat(noGoal, ungrouped);
+    const WIND_DOWN_DEFAULT = 22;  // fallback wind-down hour when unset
+    const DAY_ANCHOR_HOUR = 6;     // nominal start of the usable day (day-timeline scale)
 
-      if (ordered.length === 0) {
-        list.innerHTML = '<div class="group-empty">No time tracked yet. Use Manage Groups to create groups and set hour goals.</div>';
-        return;
+    const escHtml = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const formatGoalH = (h) => (Number.isInteger(h) ? h + 'h' : h.toFixed(1) + 'h');
+    const formatHour = (h) => { const ap = h >= 12 && h < 24 ? 'PM' : 'AM'; let x = h % 12; if (x === 0) x = 12; return `${x} ${ap}`; };
+    const getWindDownHour = () => {
+      const el = document.getElementById('wind-down-hour');
+      const n = parseInt(el ? el.value : '', 10);
+      return Number.isFinite(n) ? n : WIND_DOWN_DEFAULT;
+    };
+
+    // Pure: how the remaining usable day relates to the daily goal still owed.
+    const computeRunway = (now, windHour, dailyGoalMs, todayMs) => {
+      const nowH = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+      const leftMs = Math.max(0, windHour - nowH) * 3600000;
+      const neededMs = Math.max(0, (dailyGoalMs || 0) - (todayMs || 0));
+      const neededPct = leftMs > 0 ? Math.min((neededMs / leftMs) * 100, 100) : (neededMs > 0 ? 100 : 0);
+      const squeeze = neededMs > 0 && neededMs >= leftMs;
+      return { leftMs, neededMs, neededPct, squeeze };
+    };
+
+    // Pure: which group (if any) owns the tracked task. Testable.
+    // -> { mode:'idle' } | { mode:'focus', groupId, isUngrouped }
+    const resolveTrackingMode = (current, groups, stats) => {
+      if (!current || !current.projectId) return { mode: 'idle' };
+      const owning = (groups || []).filter(g => (g.projectIds || []).includes(current.projectId));
+      if (owning.length === 0) return { mode: 'focus', groupId: null, isUngrouped: true };
+      let pick = owning[0];
+      if (owning.length > 1 && Array.isArray(stats)) {
+        const gapOf = (g) => { const s = stats.find(x => x.id === g.id); return s ? (s.dailyGoalMs - s.todayMs) : 0; };
+        pick = owning.reduce((best, g) => (gapOf(g) > gapOf(best) ? g : best), owning[0]);
+      }
+      return { mode: 'focus', groupId: pick.id, isUngrouped: false };
+    };
+
+    // Top-level entry: pick Idle or Focus and render it.
+    const renderTodayView = (metrics) => {
+      lastPullWall = Date.now();
+      const idleEl = document.getElementById('td-idle');
+      const focusEl = document.getElementById('td-focus');
+      if (!idleEl || !focusEl) return;
+      const stats = computeGroupStats(metrics);
+      const res = resolveTrackingMode(trackingCurrent, loadGroups(), stats);
+      if (res.mode === 'focus') {
+        idleEl.classList.add('hidden');
+        focusEl.classList.remove('hidden');
+        renderFocus(metrics, stats, res);
+        startFocusTimer();
+      } else {
+        stopFocusTimer();
+        focusEl.classList.add('hidden');
+        idleEl.classList.remove('hidden');
+        renderIdle(metrics, stats);
+      }
+    };
+
+    // Called by the message handler the instant tracking state changes.
+    const applyTrackingMode = () => { if (latestMetrics) renderTodayView(latestMetrics); };
+
+    // --- IDLE: Launchpad ---
+    const renderIdle = (metrics, stats) => {
+      renderRunway(metrics);
+      renderLanes(metrics, stats);
+      renderMomentum(metrics);
+    };
+
+    const renderRunway = (metrics) => {
+      const el = document.getElementById('runway');
+      if (!el) return;
+      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
+      const todayMs = metrics.todayTimeSpent || 0;
+      const weekMs = metrics.totalTimeSpent || 0;
+      const now = new Date();
+      const windHour = getWindDownHour();
+      const { leftMs, neededMs, neededPct, squeeze } = computeRunway(now, windHour, dailyGoalMs, todayMs);
+
+      // Day timeline: fraction of the nominal usable day (DAY_ANCHOR_HOUR → wind-down)
+      // already elapsed. A felt gauge of the depleting day, not an exact clock.
+      const nowH = now.getHours() + now.getMinutes() / 60;
+      const dayWindowH = Math.max(1, windHour - DAY_ANCHOR_HOUR);
+      const dayElapsedPct = Math.min(Math.max((nowH - DAY_ANCHOR_HOUR) / dayWindowH, 0), 1) * 100;
+
+      // The bar always means the same thing: today's progress toward the daily
+      // goal. Consistency matters more than cleverness here. The remaining-day
+      // pressure lives in the big number and the status line, not the bar.
+      const goalPct = dailyGoalMs > 0 ? Math.min((todayMs / dailyGoalMs) * 100, 100) : 0;
+
+      let eyebrow, big, needClass, needHtml;
+      if (leftMs <= 0) {
+        eyebrow = 'The day is done';
+        big = `Day's over`;
+        if (dailyGoalMs <= 0) { needClass = ''; needHtml = `${formatTime(todayMs)} logged today`; }
+        else if (neededMs <= 0) { needClass = 'met'; needHtml = `Today's goal met`; }
+        else { needClass = ''; needHtml = `${formatTime(todayMs)} of ${formatGoalH(dailyGoalMs / 3600000)} — rest now`; }
+      } else {
+        eyebrow = 'Usable day left';
+        big = `${formatTime(leftMs)} <span class="u">left</span>`;
+        if (dailyGoalMs <= 0) { needClass = ''; needHtml = 'No daily goal set'; }
+        else if (neededMs <= 0) { needClass = 'met'; needHtml = `Today's goal met`; }
+        else if (squeeze) { needClass = 'squeeze'; needHtml = `<b>${formatTime(neededMs)}</b> still needed — it's tight`; }
+        else { needClass = ''; needHtml = `<b>${formatTime(neededMs)}</b> still needed`; }
       }
 
-      const bar = (label, ms, goalMs) => {
-        if (goalMs > 0) {
-          const pct = Math.min((ms / goalMs) * 100, 100);
-          return `<div class="group-bar-row"><span class="group-bar-label">${label}</span>`
-            + `<div class="group-track"><div class="group-fill" style="width:${pct}%;background:${gradientColor(pct)}"></div></div>`
-            + `<span class="group-bar-pct">${Math.round(pct)}% of ${(goalMs / 3600000).toFixed(1)}h</span></div>`;
-        }
-        return `<div class="group-bar-row"><span class="group-bar-label">${label}</span>`
-          + `<div class="group-track"></div><span class="group-bar-pct">${formatTime(ms)}</span></div>`;
-      };
+      el.innerHTML = `
+        <div class="runway-top">
+          <div>
+            <div class="runway-eyebrow">${eyebrow}</div>
+            <div class="runway-big">${big}</div>
+          </div>
+          <div class="runway-need ${needClass}">${needHtml}</div>
+        </div>
+        <div class="runway-day">
+          <div class="runway-day-left" style="width:${100 - dayElapsedPct}%"></div>
+          <div class="runway-day-now" style="left:${dayElapsedPct}%"></div>
+        </div>
+        <div class="runway-day-caption"><span>the day</span><span>ends ${formatHour(windHour)}</span></div>
+        <div class="runway-bar-label">Today's goal</div>
+        <div class="runway-bar"><div class="runway-need-fill calm" style="width:${goalPct}%"></div></div>
+        <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(todayMs)} today &middot; ${formatTime(weekMs)} this week</div>`;
+    };
 
-      list.innerHTML = ordered.map(s => {
-        let behindHtml = '<span class="group-behind muted">No weekly goal</span>';
-        if (s.weeklyGoalMs > 0 && s.proratedGoalMs > 0) {
-          const diff = s.weeklyMs - s.proratedGoalMs;
-          const h = Math.abs(diff / 3600000).toFixed(1);
-          behindHtml = diff >= 0
-            ? `<span class="group-behind ahead">${h}h ahead</span>`
-            : `<span class="group-behind behind">${h}h behind</span>`;
-        } else if (s.isUngrouped) {
-          behindHtml = '';
-        }
-        const projRows = s.projectTitles.slice()
-          .sort((a, b) => (projectData[b] || 0) - (projectData[a] || 0))
-          .map(t => `<span class="group-proj"><span class="dot" style="background:${colors[t] || '#60a5fa'}"></span>${t} <b>${formatTime(projectData[t] || 0)}</b></span>`)
-          .join('');
-        const projHtml = projRows
-          ? `<div class="group-projects">${projRows}</div>`
-          : '<div class="group-projects"><span class="group-empty">No projects assigned.</span></div>';
-        return `
-          <div class="group-block" style="--group-color:${s.color}">
-            <div class="group-block-header">
-              <span class="group-dot"></span>
-              <span class="group-name">${s.name}</span>
-              ${behindHtml}
+    const renderLanes = (metrics, stats) => {
+      const el = document.getElementById('lanes-list');
+      if (!el) return;
+      const real = stats.filter(s => !s.isUngrouped);
+      const gap = (s) => (s.dailyGoalMs > 0 ? s.dailyGoalMs - s.todayMs : -Infinity);
+      const sorted = real.slice().sort((a, b) => gap(b) - gap(a));
+      const ordered = sorted.concat(stats.filter(s => s.isUngrouped));
+      if (ordered.length === 0) {
+        el.innerHTML = '<div class="lane-empty">No lanes yet. Use Manage Groups to create one and set a daily goal.</div>';
+        return;
+      }
+      const slipping = sorted.find(s => s.dailyGoalMs > 0 && s.todayMs < s.dailyGoalMs);
+      const slippingId = slipping ? slipping.id : null;
+      el.innerHTML = ordered.map(s => {
+        const hasGoal = s.dailyGoalMs > 0;
+        const pct = hasGoal ? Math.min((s.todayMs / s.dailyGoalMs) * 100, 100) : 0;
+        const filled = hasGoal && s.todayMs >= s.dailyGoalMs;
+        const valHtml = hasGoal
+          ? `<b>${formatTime(s.todayMs)}</b> / ${formatGoalH(s.dailyGoalMs / 3600000)}`
+          : `<b>${formatTime(s.todayMs)}</b> today`;
+        const sub = s.weeklyGoalMs > 0
+          ? `This week ${formatTime(s.weeklyMs)} / ${formatGoalH(s.weeklyGoalMs / 3600000)}`
+          : (s.isUngrouped ? '' : 'No weekly goal');
+        return `<div class="lane ${s.id === slippingId ? 'slipping' : ''}" style="--lane-color:${s.color}">
+            <div class="lane-head">
+              <span class="lane-dot"></span>
+              <span class="lane-name">${escHtml(s.name)}</span>
+              <span class="lane-val">${valHtml}</span>
             </div>
-            ${bar('Week', s.weeklyMs, s.proratedGoalMs)}
-            ${bar('Today', s.todayMs, s.dailyGoalMs)}
-            ${projHtml}
+            <div class="lane-track"><div class="lane-fill ${filled ? 'filled' : ''}" style="width:${pct}%"></div></div>
+            ${sub ? `<div class="lane-sub">${sub}</div>` : ''}
           </div>`;
       }).join('');
+    };
+
+    const renderMomentum = (metrics) => {
+      const el = document.getElementById('momentum');
+      if (!el) return;
+      const dayTotals = {};
+      cachedTasks.forEach(t => { for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms; });
+      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
+      const floorMs = dailyGoalMs > 0 ? dailyGoalMs / 3 : 30 * 60000; // a day "counts" at 1/3 goal, or 30m
+      const today = new Date();
+      const N = 14;
+      const cells = [];
+      for (let i = N - 1; i >= 0; i--) {
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        const ds = toLocalDateStr(d);
+        const ms = dayTotals[ds] || 0;
+        cells.push({ ds, ms, hit: ms >= floorMs, isToday: i === 0 });
+      }
+      let streak = 0;
+      for (let i = 0; i < 500; i++) {
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        const hit = (dayTotals[toLocalDateStr(d)] || 0) >= floorMs;
+        if (i === 0) { if (hit) streak++; }        // today unfinished: a miss doesn't break
+        else if (hit) streak++; else break;
+      }
+      const todayHit = cells[cells.length - 1].hit;
+      const cellsHtml = cells.map(c => {
+        const cls = c.isToday && !c.hit ? 'today' : (c.hit ? 'hit' : '');
+        return `<span class="mom-cell ${cls}" title="${c.ds}: ${formatTime(c.ms)}"></span>`;
+      }).join('');
+      const label = streak > 0
+        ? `<b>${streak}</b>-day streak${todayHit ? '' : ' &middot; today not logged yet'}`
+        : `No streak yet &middot; a day counts at ${formatTime(floorMs)}`;
+      el.innerHTML = `<div class="momentum-cells">${cellsHtml}</div><div class="momentum-label">${label}</div>`;
+    };
+
+    // --- FOCUS: Engine ---
+    const renderFocusOthers = (stats, activeGroupId) => {
+      const others = stats.filter(s => !s.isUngrouped && s.id !== activeGroupId);
+      if (!others.length) return '';
+      const rows = others.map(s => {
+        const pct = s.dailyGoalMs > 0 ? Math.min((s.todayMs / s.dailyGoalMs) * 100, 100) : 0;
+        return `<div class="focus-mini"><span class="lane-dot" style="--lane-color:${s.color}"></span>
+            <span class="focus-mini-name">${escHtml(s.name)}</span>
+            <span class="focus-mini-track"><span class="focus-mini-fill" style="width:${pct}%"></span></span>
+            <span class="focus-mini-val">${s.dailyGoalMs > 0 ? Math.round(pct) + '%' : formatTime(s.todayMs)}</span></div>`;
+      }).join('');
+      return `<details class="focus-others"><summary>Other lanes</summary>${rows}</details>`;
+    };
+
+    const renderFocus = (metrics, stats, res) => {
+      const el = document.getElementById('td-focus');
+      if (!el) return;
+      const cur = trackingCurrent || {};
+      const proj = cur.projectId && cachedProjects.find(p => p.id === cur.projectId);
+      const projName = (proj && proj.title) || 'No project';
+      const group = res.groupId ? stats.find(s => s.id === res.groupId) : null;
+      const color = (group && group.color) || 'var(--td-go)';
+      el.style.setProperty('--focus-color', color);
+      // Ungrouped: reflect just the tracked project's time today, not the global total.
+      const projTodayMs = (metrics.projectTodayData && metrics.projectTodayData[projName]) || 0;
+      focusState = {
+        baseTodayMs: group ? group.todayMs : projTodayMs,
+        goalMs: group ? group.dailyGoalMs : 0,
+        groupName: group ? group.name : (res.isUngrouped ? 'this project' : 'this lane'),
+      };
+      el.innerHTML = `
+        <div class="focus-eyebrow"><span class="focus-live-dot"></span>Tracking now</div>
+        <div class="focus-task">${escHtml(cur.title || 'Working')}</div>
+        <div class="focus-proj">${escHtml(projName)}${group ? ' &middot; ' + escHtml(group.name) : ''}</div>
+        <div class="focus-ring-wrap">
+          <svg class="focus-ring" viewBox="0 0 240 240">
+            <circle class="focus-ring-track" cx="120" cy="120" r="106"></circle>
+            <circle class="focus-ring-fill" id="focus-ring-fill" cx="120" cy="120" r="106"></circle>
+          </svg>
+          <div class="focus-ring-center">
+            <div class="focus-big" id="focus-big"></div>
+            <div class="focus-goalline" id="focus-goalline"></div>
+          </div>
+        </div>
+        <div class="focus-countdown" id="focus-countdown"></div>
+        <div class="focus-depth" id="focus-depth"></div>
+        <div class="focus-runway" id="focus-runway"></div>
+        <div class="focus-day" id="focus-day"><div class="focus-day-left" id="focus-day-left"></div><div class="focus-day-now" id="focus-day-now"></div></div>
+        ${renderFocusOthers(stats, res.groupId)}`;
+      updateFocusLive();
+    };
+
+    const RING_C = 2 * Math.PI * 106;
+    const updateFocusLive = () => {
+      if (!focusState) return;
+      const fillEl = document.getElementById('focus-ring-fill');
+      if (!fillEl) return;
+      const extra = trackingCurrent ? Math.max(0, Date.now() - lastPullWall) : 0;
+      const todayMs = focusState.baseTodayMs + extra;
+      const goalMs = focusState.goalMs;
+      const pct = goalMs > 0 ? Math.min(todayMs / goalMs, 1) : 0;
+      fillEl.style.strokeDasharray = RING_C.toFixed(1);
+      fillEl.style.strokeDashoffset = (RING_C * (1 - pct)).toFixed(1);
+      const bigEl = document.getElementById('focus-big');
+      const goalEl = document.getElementById('focus-goalline');
+      const cdEl = document.getElementById('focus-countdown');
+      const depthEl = document.getElementById('focus-depth');
+      if (goalMs > 0) {
+        bigEl.textContent = Math.round(pct * 100) + '%';
+        goalEl.textContent = `${formatTime(todayMs)} / ${formatGoalH(goalMs / 3600000)}`;
+        const leftMs = goalMs - todayMs;
+        if (leftMs > 0) {
+          cdEl.textContent = `${formatTime(leftMs)} to close today's ${focusState.groupName} goal`;
+          cdEl.className = 'focus-countdown';
+        } else {
+          cdEl.textContent = `Today's ${focusState.groupName} goal met — keep rolling`;
+          cdEl.className = 'focus-countdown met';
+        }
+      } else {
+        bigEl.textContent = formatTime(todayMs);
+        goalEl.textContent = 'today';
+        cdEl.textContent = 'No daily goal on this lane';
+        cdEl.className = 'focus-countdown';
+      }
+      depthEl.innerHTML = focusSessionStart ? `This session: <b>${formatTime(Date.now() - focusSessionStart)}</b>` : '';
+      const runwayEl = document.getElementById('focus-runway');
+      if (runwayEl) {
+        const now = new Date();
+        const windHour = getWindDownHour();
+        const dayLeftMs = computeRunway(now, windHour, 0, 0).leftMs;
+        runwayEl.textContent = dayLeftMs > 0
+          ? `${formatTime(dayLeftMs)} of usable day left`
+          : 'Past wind-down — wrap up soon';
+        // Same depleting day-timeline as the Launchpad, but compact and peripheral.
+        const nowH = now.getHours() + now.getMinutes() / 60;
+        const elapsedPct = Math.min(Math.max((nowH - DAY_ANCHOR_HOUR) / Math.max(1, windHour - DAY_ANCHOR_HOUR), 0), 1) * 100;
+        const dl = document.getElementById('focus-day-left');
+        const dn = document.getElementById('focus-day-now');
+        if (dl) dl.style.width = (100 - elapsedPct) + '%';
+        if (dn) dn.style.left = elapsedPct + '%';
+      }
+    };
+
+    const startFocusTimer = () => { if (!focusTimer) focusTimer = setInterval(updateFocusLive, 1000); };
+    const stopFocusTimer = () => { if (focusTimer) { clearInterval(focusTimer); focusTimer = null; } };
+
+    // Time-delta fallback: infer the tracked task when the hook is unavailable.
+    const updateTrackingFallback = (tasks) => {
+      if (trackingViaHook) { prevTodayByTaskId = null; return; }
+      const todayStr = toLocalDateStr(new Date());
+      const cur = {};
+      tasks.forEach(t => { const ms = (t.timeSpentOnDay && t.timeSpentOnDay[todayStr]) || 0; if (ms) cur[t.id] = ms; });
+      if (prevTodayByTaskId) {
+        let bestId = null, bestDelta = 0;
+        for (const id in cur) { const d = cur[id] - (prevTodayByTaskId[id] || 0); if (d > bestDelta) { bestDelta = d; bestId = id; } }
+        if (bestId && bestDelta > 1000) {
+          const t = tasks.find(x => x.id === bestId);
+          if (t) { if (!trackingCurrent || trackingCurrent.id !== t.id) focusSessionStart = Date.now(); trackingCurrent = t; }
+        } else if (trackingCurrent) {
+          trackingCurrent = null; focusSessionStart = null;
+        }
+      }
+      prevTodayByTaskId = cur;
     };
 
     // --- RETROSPECTIVE view: group allocation balance bar (actual vs target) ---
@@ -1035,7 +1376,7 @@
         <div class="weekly-review-grid">
           <div class="wr-stat">
             <div class="wr-stat-value">${daysStudied}<span style="font-size:0.9rem;font-weight:400">/6</span></div>
-            <div class="wr-stat-label">Days studied</div>
+            <div class="wr-stat-label">Active days</div>
           </div>
           <div class="wr-stat">
             <div class="wr-stat-value">${formatTime(avgMs)}</div>
@@ -1060,126 +1401,10 @@
       // Weekly review is rendered in the Retrospective view
       renderWeekInReview(metrics);
 
-      document.getElementById('stat-time').innerText = formatTime(metrics.totalTimeSpent);
-      document.getElementById('stat-today-time').innerText = formatTime(metrics.todayTimeSpent);
-
-      // Period comparison with previous period
-      const renderComparison = (elId, current, previous) => {
-        const el = document.getElementById(elId);
-        if (current === 0 && previous === 0) {
-          el.textContent = '';
-          el.className = 'comparison neutral';
-          return;
-        }
-        const diff = current - previous;
-        if (diff === 0) {
-          el.textContent = '\u25B2 0h';
-          el.className = 'comparison neutral';
-          return;
-        }
-        const absDiff = Math.abs(diff);
-        const h = Math.floor(absDiff / 3600000);
-        const m = Math.round((absDiff % 3600000) / 60000);
-        const sign = diff >= 0 ? '+' : '-';
-        const arrow = diff >= 0 ? '\u25B2' : '\u25BC';
-        const timeStr = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
-        el.textContent = `${arrow} ${sign}${timeStr}`;
-        el.className = diff >= 0 ? 'comparison up' : 'comparison down';
-      };
-      const bestPrevWeek = Math.max(...metrics.prevWeekTotals);
-      renderComparison('stat-time-cmp', metrics.totalTimeSpent, bestPrevWeek);
-      renderComparison('stat-today-cmp', metrics.todayTimeSpent, metrics.yesterdayTimeSpent);
-
-      // Period time goal progress (prorated to elapsed working days out of 6).
-      // Weekly goal is the sum of every group's weekly goal.
-      const periodGoalH = getTotalWeeklyGoalH();
-      const periodGoalMs = periodGoalH * 3600000;
-      document.getElementById('goal-period-label').textContent = periodGoalH > 0
-        ? `Goal: ${(+periodGoalH.toFixed(2))}h / week` : 'No weekly goal set';
-      const proratedGoalMs = periodGoalMs > 0 && metrics.workingDaysElapsed > 0
-        ? (periodGoalMs / 6) * metrics.workingDaysElapsed : periodGoalMs;
-      const periodPct = proratedGoalMs > 0 ? Math.min((metrics.totalTimeSpent / proratedGoalMs) * 100, 100) : 0;
-      const periodBar = document.getElementById('stat-time-progress');
-      periodBar.style.width = `${periodPct}%`;
-      // Red (0%) → Yellow (50%) → Green (100%)
-      const pr = periodPct < 50 ? 248 : Math.round(248 - (periodPct - 50) * 2 * (248 - 74) / 100);
-      const pg = periodPct < 50 ? Math.round(113 + periodPct * 2 * (222 - 113) / 100) : 222;
-      const pb = periodPct < 50 ? Math.round(113 + periodPct * 2 * (128 - 113) / 100) : 128;
-      periodBar.style.backgroundColor = `rgb(${pr},${pg},${pb})`;
-      const proratedGoalH = proratedGoalMs / 3600000;
-      document.getElementById('stat-time-pct').innerText = proratedGoalMs > 0
-        ? `${Math.round(periodPct)}% of ${proratedGoalH.toFixed(1)}h prorated goal`
-        : '';
-
-      // Deficit indicator: goal / 6 working days vs actual
-      const deficitEl = document.getElementById('stat-time-deficit');
-      if (periodGoalMs > 0 && metrics.workingDaysElapsed > 0) {
-        const expectedMs = (periodGoalMs / 6) * metrics.workingDaysElapsed;
-        const diffMs = metrics.totalTimeSpent - expectedMs;
-        const diffH = Math.abs(diffMs / 3600000).toFixed(1);
-        if (diffMs >= 0) {
-          deficitEl.textContent = `${diffH}h ahead`;
-          deficitEl.className = 'deficit-indicator ahead';
-        } else {
-          deficitEl.textContent = `${diffH}h behind`;
-          deficitEl.className = 'deficit-indicator behind';
-        }
-      } else {
-        deficitEl.textContent = '';
-        deficitEl.className = 'deficit-indicator';
-      }
-
-      // Required pace to still hit the weekly goal in the remaining working days
-      const paceEl = document.getElementById('stat-time-pace');
-      const remainingDays = Math.max(0, 6 - metrics.workingDaysElapsed);
-      if (periodGoalMs > 0 && metrics.totalTimeSpent >= periodGoalMs) {
-        paceEl.textContent = 'Weekly goal reached';
-        paceEl.className = 'urgency-line ahead';
-      } else if (periodGoalMs > 0 && remainingDays > 0) {
-        const perDayH = (periodGoalMs - metrics.totalTimeSpent) / remainingDays / 3600000;
-        const dGoalH = getTotalDailyGoalH();
-        paceEl.textContent = `Need ${perDayH.toFixed(1)}h/day for ${remainingDays} more day${remainingDays !== 1 ? 's' : ''}`;
-        paceEl.className = (dGoalH > 0 && perDayH > dGoalH) ? 'urgency-line behind' : 'urgency-line muted';
-      } else {
-        paceEl.textContent = '';
-        paceEl.className = 'urgency-line';
-      }
-
-      // Today time goal progress (goal = sum of every group's daily goal)
-      const todayGoalH = getTotalDailyGoalH();
-      const todayGoalMs = todayGoalH * 3600000;
-      document.getElementById('goal-today-label').textContent = todayGoalH > 0
-        ? `Goal: ${(+todayGoalH.toFixed(2))}h / day` : 'No daily goal set';
-      const todayPct = todayGoalMs > 0 ? Math.min((metrics.todayTimeSpent / todayGoalMs) * 100, 100) : 0;
-      const todayBar = document.getElementById('stat-today-progress');
-      todayBar.style.width = `${todayPct}%`;
-      // Red (0%) → Yellow (50%) → Green (100%)
-      const r = todayPct < 50 ? 248 : Math.round(248 - (todayPct - 50) * 2 * (248 - 74) / 100);
-      const g = todayPct < 50 ? Math.round(113 + todayPct * 2 * (222 - 113) / 100) : 222;
-      const b = todayPct < 50 ? Math.round(113 + todayPct * 2 * (128 - 113) / 100) : 128;
-      todayBar.style.backgroundColor = `rgb(${r},${g},${b})`;
-      document.getElementById('stat-today-pct').innerText = todayGoalMs > 0
-        ? `${Math.round(todayPct)}% of ${(+todayGoalH.toFixed(2))}h goal`
-        : '';
-
-      // Time left to reach today's goal
-      const todayLeftEl = document.getElementById('stat-today-left');
-      if (todayGoalMs > 0) {
-        const leftMs = todayGoalMs - metrics.todayTimeSpent;
-        if (leftMs > 0) {
-          todayLeftEl.textContent = `${formatTime(leftMs)} left to reach today's goal`;
-          todayLeftEl.className = 'urgency-line behind';
-        } else {
-          todayLeftEl.textContent = "Today's goal reached";
-          todayLeftEl.className = 'urgency-line ahead';
-        }
-      } else {
-        todayLeftEl.textContent = '';
-        todayLeftEl.className = 'urgency-line';
-      }
+      // Today view: renders Idle (Launchpad) or Focus (Engine) per tracking state.
+      renderTodayView(metrics);
 
       updateBarChart();
-      renderTodayGroups();
       renderAllocBar();
       renderAllTimeHours();
       renderWindDownBanner();
@@ -1812,6 +2037,9 @@
     window.getTotalDailyGoalH = getTotalDailyGoalH;
     window.updateBarChart = updateBarChart;
     window.renderHeatmap = renderHeatmap;
+    window.resolveTrackingMode = resolveTrackingMode;
+    window.computeRunway = computeRunway;
+    window.renderTodayView = renderTodayView;
 
     // --- SP INTEGRATION / NATIVE IFRAME COMMS ---
     const pullDataFromSP = async () => {
@@ -1853,6 +2081,7 @@
           console.log("[sp-dashboard] final cachedTasks done count:", finalDoneCount);
           cachedProjects = await window.PluginAPI.getAllProjects() || [];
           console.log("[sp-dashboard] received projects count", cachedProjects.length);
+          updateTrackingFallback(cachedTasks);
           processData(cachedTasks, cachedProjects);
         } else {
           console.warn("[sp-dashboard] PluginAPI missing inside pullDataFromSP");
@@ -1868,6 +2097,17 @@
       console.log(event.data)
       if (event.data && event.data.type === 'SP_STATE_CHANGED') {
         pullDataFromSP();
+      } else if (event.data && event.data.type === 'SP_TRACKING_CHANGED') {
+        // The host's CURRENT_TASK_CHANGE hook: authoritative start/switch/stop.
+        trackingViaHook = true;
+        const current = event.data.current || null;
+        const previous = event.data.previous || null;
+        const changed = (current && current.id) !== (trackingCurrent && trackingCurrent.id);
+        if (current && (changed || !focusSessionStart)) focusSessionStart = Date.now();
+        if (!current) focusSessionStart = null;
+        trackingCurrent = current;
+        applyTrackingMode();   // switch modes immediately
+        pullDataFromSP();      // then refresh totals
       }
     });
 
@@ -1886,55 +2126,58 @@
         pullDataFromSP();
       } else {
         console.log("[sp-dashboard] No PluginAPI detected. Loading mock data...");
-        
-        // Simulating the exact screenshot payload
-        const dates = [
-          new Date('2026-02-22').toISOString().split('T')[0],
-          new Date('2026-02-21').toISOString().split('T')[0],
-          new Date('2026-02-20').toISOString().split('T')[0],
-          new Date('2026-02-19').toISOString().split('T')[0]
-        ];
+
+        // Standalone dev + screenshots. Pick a state with ?scenario=NAME:
+        //   idle (default) | met | empty | focus | focus-met | focus-ungrouped
+        // The wall-clock (usable-day / squeeze / day's-over) is orthogonal — fake
+        // it in the browser or via scripts/screenshots.mjs. Data here is
+        // deterministic per scenario so screenshots are stable.
+        const params = new URLSearchParams(location.search);
+        const scenario = params.get('scenario') || (/(\?|&)focus\b/.test(location.search) ? 'focus' : 'idle');
+        const d = (n) => toLocalDateStr(new Date(Date.now() - n * 86400000));
+        const met = (scenario === 'met' || scenario === 'focus-met');
 
         cachedProjects = [
-          { id: "p1", title: "Website Redesign", theme: { primary: "#42a5f5" } },
-          { id: "p2", title: "Marketing Campaign", theme: { primary: "#66bb6a" } }
+          { id: "p1", title: "Elements of Computing Systems", theme: { primary: "#7aa2f7" } },
+          { id: "p2", title: "Linear Algebra", theme: { primary: "#9ece6a" } },
+          { id: "p3", title: "Deutsch", theme: { primary: "#e0af68" } }
         ];
 
+        // Deterministically set lanes for the scenario (dev fallback only).
+        saveGroups(scenario === 'empty' ? [] : [
+          { id: "g-cs",   name: "CS",        weeklyGoalH: 12, dailyGoalH: 3, projectIds: ["p1"], color: "#7aa2f7" },
+          { id: "g-math", name: "Math",      weeklyGoalH: 9,  dailyGoalH: 2, projectIds: ["p2"], color: "#9ece6a" },
+          { id: "g-lang", name: "Languages", weeklyGoalH: 5,  dailyGoalH: 1, projectIds: ["p3"], color: "#e0af68" }
+        ]);
+
         cachedTasks = [
-          {
-            id: "t1", parentId: null, title: "Create Figma Mockups", isDone: true, doneOn: new Date('2026-02-22T10:00Z').getTime(), projectId: "p1",
-            timeSpentOnDay: { [dates[0]]: 14400000 /* 4h */, [dates[1]]: 7200000 /* 2h */ }
-          },
-          {
-            id: "t2", parentId: null, title: "General Admin", isDone: false, projectId: null,
-            timeSpentOnDay: { [dates[0]]: 3600000 /* 1h */ }
-          },
-          {
-            id: "t3", parentId: null, title: "Draft Email Copy", isDone: true, doneOn: new Date('2026-02-20T10:00Z').getTime(), projectId: "p2",
-            timeSpentOnDay: { [dates[2]]: 18000000 /* 5h */ }
-          },
-          {
-            id: "t4", parentId: null, title: "Setup Database", isDone: false, projectId: "p1",
-            timeSpentOnDay: { [dates[3]]: 10800000 /* 3h */ }, dueDay: "2026-02-18" // Overdue
-          },
-          {
-            id: "t5", parentId: null, title: "Write Documentation", isDone: false, projectId: "p1",
-            timeSpentOnDay: {}, // No time logged in this period – not included in denominator
-            dueDay: "2026-02-28" // Future due date
-          },
-          {
-            id: "t6", parentId: null, title: "API Integration", isDone: false, projectId: "p1",
-            timeSpentOnDay: { [dates[0]]: 5400000 /* 1.5h */ }, dueDay: "2026-02-17" // Overdue with time logged
-          },
-          {
-            id: "t6-1", parentId: "t6", title: "Fix authentication endpoint", isDone: true, doneOn: new Date('2026-02-21T14:00Z').getTime(), projectId: "p1",
-            timeSpentOnDay: { [dates[1]]: 7200000 /* 2h */ } // Child task (subtask of t6)
-          },
-          {
-            id: "t7", parentId: null, title: "Review Code", isDone: true, doneOn: new Date('2026-02-21T15:00Z').getTime(), projectId: "p1",
-            timeSpentOnDay: { [dates[1]]: 3600000 /* 1h */ }, dueDay: "2026-02-19" // Late - completed 2 days after due date
-          }
+          { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",
+            timeSpentOnDay: { [d(0)]: met ? 10800000 : 4800000 } },
+          { id: "m-today", parentId: null, title: "Curl & divergence problem set", isDone: false, projectId: "p2",
+            timeSpentOnDay: { [d(0)]: met ? 7200000 : 5400000 } },
+          { id: "g-today", parentId: null, title: "Deutsch A2 — Lektion 4", isDone: false, projectId: "p3",
+            timeSpentOnDay: met ? { [d(0)]: 3600000 } : {} },
+          { id: "hist", parentId: null, title: "Session history", isDone: false, projectId: "p1",
+            timeSpentOnDay: {
+              [d(1)]: 12600000, [d(2)]: 9000000, [d(3)]: 14400000, [d(4)]: 7200000, [d(5)]: 0,
+              [d(6)]: 10800000, [d(7)]: 12600000, [d(8)]: 9000000, [d(9)]: 5400000, [d(10)]: 14400000,
+              [d(11)]: 7200000, [d(12)]: 10800000, [d(13)]: 9000000
+            } }
         ];
+
+        if (scenario === 'focus-ungrouped') {
+          cachedProjects.push({ id: "p4", title: "Deep Reading", theme: { primary: "#bb9af7" } });
+          cachedTasks.push({ id: "r-today", parentId: null, title: 'Read "The Selfish Gene", ch. 4', isDone: false, projectId: "p4",
+            timeSpentOnDay: { [d(0)]: 2400000 } });
+        }
+
+        // Simulate an in-progress tracking session for the focus scenarios.
+        const trackMap = { 'focus': ['c-today', 25], 'focus-met': ['c-today', 95], 'focus-ungrouped': ['r-today', 15] };
+        if (trackMap[scenario]) {
+          const [taskId, minsIn] = trackMap[scenario];
+          trackingCurrent = cachedTasks.find(t => t.id === taskId);
+          focusSessionStart = Date.now() - minsIn * 60000;
+        }
 
         processData(cachedTasks, cachedProjects);
       }

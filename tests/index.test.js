@@ -67,10 +67,10 @@ describe('Date Range Reporter UI', () => {
 
       window.processData(mockTasks, mockProjects);
 
-      // Period total time
-      expect(document.getElementById('stat-time').innerText).toBe('3h 0m');
-      // Today's time (same tasks, same day)
-      expect(document.getElementById('stat-today-time').innerText).toBe('3h 0m');
+      // Totals are surfaced on the idle runway ("Xh Ym today · Zh Wm this week").
+      const runway = document.getElementById('runway').textContent;
+      expect(runway).toContain('3h 0m today');
+      expect(runway).toContain('3h 0m this week');
     });
 
     it('should handle a task without dueDay by not marking it overdue', () => {
@@ -83,7 +83,7 @@ describe('Date Range Reporter UI', () => {
       };
       window.processData([task], []);
       // no time entries, no due date -> zero time
-      expect(document.getElementById('stat-time').innerText).toBe('0h 0m');
+      expect(document.getElementById('runway').textContent).toContain('0h 0m today');
     });
 
     it('should count tasks due today in totalTasks denominator even with no time logged', () => {
@@ -98,8 +98,9 @@ describe('Date Range Reporter UI', () => {
       };
       window.processData([taskDueToday], []);
       // Task due today with no time: zero period and today time
-      expect(document.getElementById('stat-time').innerText).toBe('0h 0m');
-      expect(document.getElementById('stat-today-time').innerText).toBe('0h 0m');
+      const runway = document.getElementById('runway').textContent;
+      expect(runway).toContain('0h 0m today');
+      expect(runway).toContain('0h 0m this week');
     });
 
     it('should deduplicate tasks that appear in both active and archived lists', () => {
@@ -196,8 +197,64 @@ describe('Date Range Reporter UI', () => {
       window.processData([], []);
       expect(window.getTotalWeeklyGoalH()).toBe(15);
       expect(window.getTotalDailyGoalH()).toBe(3);
-      expect(document.getElementById('goal-period-label').textContent).toContain('15');
-      expect(document.getElementById('goal-today-label').textContent).toContain('3');
+      // Per-group goals surface on the idle lanes.
+      const lanes = document.getElementById('lanes-list').textContent;
+      expect(lanes).toContain('10h'); // group A weekly goal
+      expect(lanes).toContain('5h');  // group B weekly goal
+    });
+  });
+
+  describe('Tracking-driven Today view', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('resolveTrackingMode returns idle when nothing is tracked', () => {
+      expect(window.resolveTrackingMode(null, []).mode).toBe('idle');
+      expect(window.resolveTrackingMode({ id: 't1' }, []).mode).toBe('idle'); // no projectId
+    });
+
+    it('resolveTrackingMode focuses the owning group', () => {
+      const groups = [{ id: 'g1', name: 'CS', projectIds: ['p1'] }];
+      const res = window.resolveTrackingMode({ id: 't1', projectId: 'p1' }, groups);
+      expect(res.mode).toBe('focus');
+      expect(res.groupId).toBe('g1');
+      expect(res.isUngrouped).toBe(false);
+    });
+
+    it('resolveTrackingMode marks an unclaimed project as ungrouped focus', () => {
+      const groups = [{ id: 'g1', name: 'CS', projectIds: ['pX'] }];
+      const res = window.resolveTrackingMode({ id: 't1', projectId: 'p9' }, groups);
+      expect(res.mode).toBe('focus');
+      expect(res.groupId).toBe(null);
+      expect(res.isUngrouped).toBe(true);
+    });
+
+    it('resolveTrackingMode picks the most-behind of multiple owning groups', () => {
+      const groups = [
+        { id: 'g1', name: 'A', projectIds: ['p1'] },
+        { id: 'g2', name: 'B', projectIds: ['p1'] },
+      ];
+      const stats = [
+        { id: 'g1', dailyGoalMs: 3600000, todayMs: 3000000 }, // gap 0.6M
+        { id: 'g2', dailyGoalMs: 3600000, todayMs: 600000 },  // gap 3.0M (more behind)
+      ];
+      const res = window.resolveTrackingMode({ id: 't1', projectId: 'p1' }, groups, stats);
+      expect(res.groupId).toBe('g2');
+    });
+
+    it('computeRunway relates remaining day to the goal still owed', () => {
+      const at = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
+      // 20:00, wind-down 22:00 -> 2h left; goal 6h, done 4h -> 2h still needed == left => squeeze
+      const r1 = window.computeRunway(at(20), 22, 6 * 3600000, 4 * 3600000);
+      expect(Math.round(r1.leftMs / 3600000)).toBe(2);
+      expect(Math.round(r1.neededMs / 3600000)).toBe(2);
+      expect(r1.squeeze).toBe(true);
+      // Goal already met -> nothing needed, not a squeeze
+      const r2 = window.computeRunway(at(18), 22, 6 * 3600000, 6 * 3600000);
+      expect(r2.neededMs).toBe(0);
+      expect(r2.squeeze).toBe(false);
+      // Past wind-down -> no usable day left
+      const r3 = window.computeRunway(at(23), 22, 6 * 3600000, 1 * 3600000);
+      expect(r3.leftMs).toBe(0);
     });
   });
 
