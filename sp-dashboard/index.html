@@ -40,8 +40,9 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-top: var(--s3, 1.5rem);
+      margin-top: 0;
       justify-content: flex-end;
+      flex-wrap: wrap;
     }
     .week-start-footer label {
       font-size: 0.75rem;
@@ -82,6 +83,14 @@
     .hidden { display: none !important; }
     .text-red { color: #f87171 !important; }
 
+    /* --- VIEW TABS --- */
+    .view-tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--divider-color, #333); padding: 0 var(--s2, 1rem); flex: 0 0 auto; }
+    .view-tab { background: none; border: none; color: var(--text-color-muted, #9e9e9e); font-size: 0.85rem; font-weight: 600; padding: 0.75rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .view-tab:hover { color: var(--text-color, #fff); }
+    .view-tab.active { color: var(--text-color, #fff); border-bottom-color: var(--c-primary, #03a9f4); }
+    /* --- SHARED FOOTER --- */
+    .app-footer { flex: 0 0 auto; border-top: 1px solid var(--divider-color, #333); padding: 0.4rem var(--s3, 1.5rem); }
+
     /* --- DASHBOARD GRID --- */
     /* --- STATS ROW --- */
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--s3, 1.5rem); margin-bottom: var(--s3, 1.5rem); }
@@ -117,19 +126,15 @@
     .progress-fill-green { background: #4ade80; }
     .progress-fill-gradient { transition: width 0.5s ease-out, background-color 0.5s ease-out; }
 
-    .goal-row { display: flex; align-items: center; gap: 4px; margin-bottom: 0.25rem; }
-    .goal-label { font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); }
-    .goal-input {
-      background: transparent; border: none; border-bottom: 1px solid var(--divider-color, #333);
-      color: var(--text-color, #fff); font-size: 0.8rem; width: 44px; outline: none;
-      text-align: right; padding: 0 2px; -moz-appearance: textfield;
-    }
-    .goal-input::-webkit-outer-spin-button, .goal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .goal-input:focus { border-bottom-color: var(--c-primary, #03a9f4); }
+    .goal-sub { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.04em; min-height: 1em; }
     .goal-pct { font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); margin-top: 0.4rem; min-height: 1em; }
     .deficit-indicator { font-size: 0.75rem; font-weight: 600; margin-top: 0.25rem; min-height: 1em; }
     .deficit-indicator.ahead { color: #4ade80; }
     .deficit-indicator.behind { color: #f87171; }
+    .urgency-line { font-size: 0.75rem; font-weight: 600; margin-top: 0.2rem; min-height: 1em; }
+    .urgency-line.behind { color: #f87171; }
+    .urgency-line.ahead { color: #4ade80; }
+    .urgency-line.muted { color: var(--text-color-muted, #9e9e9e); font-weight: 400; }
 
     /* Wind-down Banner */
     .wind-down-banner { display: none; background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(248, 113, 113, 0.08)); border: 1px solid rgba(251, 146, 60, 0.3); border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; }
@@ -218,20 +223,10 @@
 
     .project-hour-card .ph-header { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; }
     .project-hour-card .ph-name { font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .project-hour-card .ph-goal-row { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .project-hour-card .ph-goal-input {
-      background: transparent; border: none; border-bottom: 1px solid var(--divider-color, #333);
-      color: var(--text-color, #fff); font-size: 0.7rem; width: 32px; outline: none;
-      text-align: right; padding: 0 2px; -moz-appearance: textfield;
-    }
-    .project-hour-card .ph-goal-input::-webkit-outer-spin-button, .project-hour-card .ph-goal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .project-hour-card .ph-goal-input:focus { border-bottom-color: var(--c-primary, #03a9f4); }
-    .project-hour-card .ph-goal-label { font-size: 0.65rem; color: var(--text-color-muted, #9e9e9e); }
     .project-hour-card .ph-value { font-size: 1.5rem; font-weight: bold; }
     .project-hour-card .ph-weekly { font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); margin-top: 0.15rem; }
     .project-hour-card .ph-progress-track { width: 100%; height: 4px; background: var(--divider-color, #333); border-radius: 2px; margin-top: 0.25rem; overflow: hidden; }
     .project-hour-card .ph-progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
-    .project-alloc-summary { font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); margin-bottom: 0.5rem; }
 
     /* --- ALLOCATION BALANCE BAR --- */
     .alloc-bar-section { margin-bottom: 1rem; }
@@ -245,22 +240,50 @@
     .alloc-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .alloc-legend-pct { font-weight: 600; color: var(--text-color, #fff); }
 
-    /* --- FOCUS GLOW on project card --- */
-    .project-hour-card.focus-glow {
-      animation: focus-pulse 2s ease-in-out infinite;
-    }
-    @keyframes focus-pulse {
-      0%, 100% { box-shadow: 0 0 4px rgba(96, 165, 250, 0.3); }
-      50% { box-shadow: 0 0 14px rgba(96, 165, 250, 0.7); }
-    }
+    /* --- GROUPS SECTION (Today) --- */
+    .groups-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: var(--s2, 1rem); }
+    .btn-ghost { background: none; border: 1px solid var(--divider-color, #333); color: var(--text-color, #fff); border-radius: var(--card-border-radius, 8px); padding: 0.35rem 0.75rem; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+    .btn-ghost:hover { border-color: var(--text-color-muted, #555); }
+    .group-block { background: var(--bg, #121212); border: 1px solid var(--divider-color, #333); border-left: 3px solid var(--group-color, #60a5fa); border-radius: var(--card-border-radius, 8px); padding: var(--s2, 1rem); margin-bottom: var(--s2, 1rem); }
+    .group-block-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .group-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--group-color, #60a5fa); flex: 0 0 auto; }
+    .group-name { font-weight: 700; font-size: 0.95rem; }
+    .group-behind { margin-left: auto; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+    .group-behind.behind { color: #f87171; }
+    .group-behind.ahead { color: #4ade80; }
+    .group-behind.muted { color: var(--text-color-muted, #9e9e9e); font-weight: 400; }
+    .group-bar-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem; }
+    .group-bar-label { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); width: 2.8rem; flex: 0 0 auto; text-transform: uppercase; letter-spacing: 0.03em; }
+    .group-track { flex: 1; height: 6px; background: var(--divider-color, #333); border-radius: 3px; overflow: hidden; }
+    .group-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .group-bar-pct { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); width: 9rem; flex: 0 0 auto; text-align: right; white-space: nowrap; }
+    .group-projects { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; margin-top: 0.7rem; }
+    .group-proj { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-color-muted, #9e9e9e); }
+    .group-proj .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+    .group-proj b { color: var(--text-color, #fff); font-weight: 600; }
+    .group-empty { font-size: 0.85rem; color: var(--text-color-muted, #9e9e9e); }
 
-    /* --- FOCUS NUDGE --- */
-    .focus-nudge { display: none; background: rgba(96, 165, 250, 0.08); border: 1px solid rgba(96, 165, 250, 0.25); border-radius: var(--card-border-radius, 8px); padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-color, #fff); }
-    .focus-nudge.visible { display: flex; align-items: center; gap: 0.5rem; }
-    .focus-nudge-icon { font-size: 1rem; flex-shrink: 0; }
-    .focus-nudge-text { flex: 1; }
-    .focus-nudge-project { font-weight: 700; }
-    .focus-nudge-detail { color: var(--text-color-muted, #9e9e9e); font-size: 0.75rem; margin-left: 0.25rem; }
+    /* --- MODAL --- */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
+    .modal-panel { background: var(--card-bg, #1e1e1e); border: 1px solid var(--divider-color, #333); border-radius: var(--card-border-radius, 8px); box-shadow: var(--whiteframe-shadow-2dp, 0 2px 4px rgba(0,0,0,0.1)); width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; padding: var(--s3, 1.5rem); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2, 1rem); }
+    .modal-head h3 { margin: 0; font-size: 1.1rem; }
+    .modal-close { background: none; border: none; color: var(--text-color-muted, #9e9e9e); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+    .modal-close:hover { color: var(--text-color, #fff); }
+    .modal-section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-color-muted, #9e9e9e); font-weight: 700; margin: 1rem 0 0.5rem; }
+    .group-editor-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+    .group-editor-row .ge-name { flex: 1; min-width: 0; }
+    .modal-input { background: var(--bg, #121212); color: var(--text-color, #fff); border: 1px solid var(--divider-color, #333); border-radius: 0.25rem; padding: 0.3rem 0.5rem; font-size: 0.8rem; outline: none; }
+    .modal-input:focus { border-color: var(--c-primary, #03a9f4); }
+    .modal-input.num { width: 4.5rem; text-align: right; -moz-appearance: textfield; }
+    .modal-input.num::-webkit-outer-spin-button, .modal-input.num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .ge-unit { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); }
+    .ge-del { background: none; border: none; color: #f87171; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; }
+    .assign-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--divider-color, #333); }
+    .assign-row .ar-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; }
+    .assign-row .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+    .modal-select { background: var(--bg, #121212); color: var(--text-color, #fff); border: 1px solid var(--divider-color, #333); border-radius: 0.25rem; padding: 0.3rem 0.5rem; font-size: 0.8rem; }
+    .btn-primary { background: var(--c-primary, #03a9f4); color: #fff; border: none; border-radius: var(--card-border-radius, 8px); padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
@@ -269,36 +292,37 @@
     
     <!-- Main Card Container -->
     <div class="main-card">
+
+      <!-- View tabs -->
+      <div class="view-tabs">
+        <button class="view-tab active" id="tab-today">Today</button>
+        <button class="view-tab" id="tab-retro">Retrospective</button>
+      </div>
+
       <!-- ========================================== -->
-      <!-- VIEW 1: DASHBOARD                          -->
+      <!-- VIEW 1: TODAY (act now)                    -->
       <!-- ========================================== -->
-      <div id="view-dashboard" class="view-content">
+      <div id="view-today" class="view-content">
 
         <!-- Wind-down Banner -->
         <div class="wind-down-banner" id="wind-down-banner"></div>
-
-        <!-- Weekly Review Banner (rest day only) -->
-        <div class="weekly-review" id="weekly-review"></div>
 
         <!-- Stats Row -->
         <div class="stats-row">
 
           <div class="stat-card">
             <div class="stat-header">
-              <h3 class="stat-title">Time Tracked This Week</h3>
+              <h3 class="stat-title">This Week</h3>
               <div class="stat-icon" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
             </div>
-            <div class="goal-row">
-              <span class="goal-label">Goal:</span>
-              <input type="number" class="goal-input" id="goal-period" min="0" step="0.5" placeholder="—">
-              <span class="goal-label">h</span>
-            </div>
+            <div class="goal-sub" id="goal-period-label"></div>
             <div class="stat-value-container">
               <span class="stat-value" id="stat-time">0h 0m</span>
               <span class="comparison neutral" id="stat-time-cmp" title="vs best of last 4 weeks"></span>
             </div>
             <div class="goal-pct" id="stat-time-pct"></div>
             <div class="deficit-indicator" id="stat-time-deficit"></div>
+            <div class="urgency-line" id="stat-time-pace"></div>
             <div class="progress-track">
               <div class="progress-fill progress-fill-gradient" id="stat-time-progress" style="width: 0%"></div>
             </div>
@@ -306,19 +330,16 @@
 
           <div class="stat-card">
             <div class="stat-header">
-              <h3 class="stat-title">Time Tracked Today</h3>
+              <h3 class="stat-title">Today</h3>
               <div class="stat-icon" style="background: rgba(74, 222, 128, 0.1); color: #4ade80;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
             </div>
-            <div class="goal-row">
-              <span class="goal-label">Goal:</span>
-              <input type="number" class="goal-input" id="goal-today" min="0" step="0.5" placeholder="—">
-              <span class="goal-label">h</span>
-            </div>
+            <div class="goal-sub" id="goal-today-label"></div>
             <div class="stat-value-container">
               <span class="stat-value" id="stat-today-time">0h 0m</span>
               <span class="comparison neutral" id="stat-today-cmp"></span>
             </div>
             <div class="goal-pct" id="stat-today-pct"></div>
+            <div class="urgency-line" id="stat-today-left"></div>
             <div class="progress-track">
               <div class="progress-fill progress-fill-gradient" id="stat-today-progress" style="width: 0%"></div>
             </div>
@@ -326,10 +347,27 @@
 
         </div>
 
-        <!-- All-time project hours -->
+        <!-- Group status (weekly + daily progress per group) -->
         <div class="project-hours-section">
-          <h3 class="section-title">Total Hours per Project (All Time)</h3>
-          <div class="project-alloc-summary" id="project-alloc-summary"></div>
+          <div class="groups-header">
+            <h3 class="section-title" style="margin:0">Groups</h3>
+            <button class="btn-ghost" id="manage-groups-btn">&#9881; Manage Groups</button>
+          </div>
+          <div id="group-status-list"></div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: RETROSPECTIVE (analyze)            -->
+      <!-- ========================================== -->
+      <div id="view-retro" class="view-content hidden">
+
+        <!-- Weekly Review -->
+        <div class="weekly-review" id="weekly-review"></div>
+
+        <!-- Group allocation balance (actual vs target) -->
+        <div class="project-hours-section">
+          <h3 class="section-title">Group Allocation (This Week)</h3>
           <div class="alloc-bar-section hidden" id="alloc-bar-section">
             <div class="alloc-bar-label">Actual</div>
             <div class="alloc-bar-track" id="alloc-bar-actual"></div>
@@ -337,7 +375,12 @@
             <div class="alloc-bar-target" id="alloc-bar-target"></div>
             <div class="alloc-bar-legend" id="alloc-bar-legend"></div>
           </div>
-          <div class="focus-nudge" id="focus-nudge"></div>
+          <div class="group-empty" id="alloc-bar-empty">Set weekly goals in Manage Groups to see actual-vs-target balance.</div>
+        </div>
+
+        <!-- All-time project hours -->
+        <div class="project-hours-section">
+          <h3 class="section-title">Total Hours per Project (All Time)</h3>
           <div class="project-hours-grid" id="project-hours-grid"></div>
         </div>
 
@@ -396,7 +439,10 @@
             </div>
           </div>
         </div>
+      </div>
 
+      <!-- Shared settings footer -->
+      <div class="app-footer">
         <div class="week-start-footer">
           <label for="wind-down-hour">Wind down at</label>
           <select id="wind-down-hour">
@@ -424,6 +470,21 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Manage Groups Modal -->
+  <div class="modal-overlay hidden" id="groups-modal">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h3>Manage Groups</h3>
+        <button class="modal-close" id="groups-modal-close" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="modal-section-title">Groups &amp; goals (hours)</div>
+      <div id="group-editors"></div>
+      <button class="btn-primary" id="add-group-btn">+ New group</button>
+      <div class="modal-section-title">Project assignment</div>
+      <div id="assign-list"></div>
     </div>
   </div>
 
@@ -547,21 +608,21 @@
       if (isOpen) renderHeatmap();
     });
 
-    // Goal inputs — persist and re-render on change
-    const goalPeriodInput = document.getElementById('goal-period');
-    const goalTodayInput = document.getElementById('goal-today');
-    const savedGoalPeriod = localStorage.getItem('sp-dashboard-goal-period');
-    const savedGoalToday = localStorage.getItem('sp-dashboard-goal-today');
-    if (savedGoalPeriod) goalPeriodInput.value = savedGoalPeriod;
-    if (savedGoalToday) goalTodayInput.value = savedGoalToday;
-    goalPeriodInput.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-goal-period', goalPeriodInput.value);
-      if (latestMetrics) updateDashboardUI(latestMetrics);
-    });
-    goalTodayInput.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-goal-today', goalTodayInput.value);
-      if (latestMetrics) updateDashboardUI(latestMetrics);
-    });
+    // --- View tabs (Today / Retrospective) ---
+    const setActiveView = (name) => {
+      const isToday = name !== 'retro';
+      document.getElementById('view-today').classList.toggle('hidden', !isToday);
+      document.getElementById('view-retro').classList.toggle('hidden', isToday);
+      document.getElementById('tab-today').classList.toggle('active', isToday);
+      document.getElementById('tab-retro').classList.toggle('active', !isToday);
+      localStorage.setItem('sp-dashboard-active-view', isToday ? 'today' : 'retro');
+      // When Retrospective becomes visible its containers finally have real
+      // width, so re-render the charts that depend on measured dimensions.
+      if (!isToday) { try { updateBarChart(); renderHeatmap(); } catch (e) {} }
+    };
+    document.getElementById('tab-today').addEventListener('click', () => setActiveView('today'));
+    document.getElementById('tab-retro').addEventListener('click', () => setActiveView('retro'));
+    if (localStorage.getItem('sp-dashboard-active-view') === 'retro') setActiveView('retro');
 
     // Wind-down hour setting
     const windDownSelect = document.getElementById('wind-down-hour');
@@ -604,325 +665,406 @@
           <h3 class="wind-down-title">Time to Wind Down</h3>
         </div>
         <div class="wind-down-body">
-          You have <strong>${total}</strong> task${total !== 1 ? 's' : ''} still pending or overdue.
-          Consider finishing up, deferring to tomorrow, or breaking remaining work into actionable next steps.
+          <strong>${total}</strong> task${total !== 1 ? 's' : ''} still due today or overdue.
         </div>
       `;
       banner.classList.add('visible');
     };
 
-    // --- RENDER LOGIC ---
-    const loadProjectGoals = () => {
-      try { return JSON.parse(localStorage.getItem('sp-dashboard-project-goals') || '{}'); } catch { return {}; }
+    // --- GROUPS: data model & persistence ---
+    const fallbackColors = ['#60a5fa', '#4ade80', '#f59e0b', '#a78bfa', '#f87171', '#2dd4bf', '#fb923c', '#e879f9'];
+    const groupColorForIndex = (i) => fallbackColors[i % fallbackColors.length];
+    const loadGroups = () => {
+      try { return JSON.parse(localStorage.getItem('sp-dashboard-groups') || '[]'); } catch { return []; }
     };
-    const saveProjectGoals = (goals) => {
-      localStorage.setItem('sp-dashboard-project-goals', JSON.stringify(goals));
+    const saveGroups = (g) => localStorage.setItem('sp-dashboard-groups', JSON.stringify(g));
+    const genGroupId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+    const getTotalWeeklyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.weeklyGoalH) || 0), 0);
+    const getTotalDailyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.dailyGoalH) || 0), 0);
+
+    // Continuous red (0%) -> yellow (50%) -> green (100%) fill color
+    const gradientColor = (pct) => {
+      const p = Math.min(Math.max(pct, 0), 100);
+      const r = p < 50 ? 248 : Math.round(248 - (p - 50) * 2 * (248 - 74) / 100);
+      const g = p < 50 ? Math.round(113 + p * 2 * (222 - 113) / 100) : 222;
+      const b = p < 50 ? Math.round(113 + p * 2 * (128 - 113) / 100) : 128;
+      return `rgb(${r},${g},${b})`;
     };
 
-    const renderProjectLifetimeHours = () => {
-      const grid = document.getElementById('project-hours-grid');
-      const summaryEl = document.getElementById('project-alloc-summary');
-      const allocBarSection = document.getElementById('alloc-bar-section');
-      const focusNudge = document.getElementById('focus-nudge');
-      const activeProjectIds = new Set();
-      const projectMap = {};
-      const projectColorByName = {};
+    // Stable per-project colors: theme color if present, else cycle the palette
+    const buildProjectColorMap = (titles) => {
+      const themeColor = {};
       cachedProjects.forEach(p => {
-        if (!p.isHiddenFromMenu) {
-          projectMap[p.id] = p.title;
-          activeProjectIds.add(p.id);
-          if (p.theme && p.theme.primary) {
-            projectColorByName[p.title] = p.theme.primary;
-          }
-        }
+        if (!p.isHiddenFromMenu && p.theme && p.theme.primary) themeColor[p.title] = p.theme.primary;
+      });
+      const map = {};
+      let idx = 0;
+      titles.forEach(t => { map[t] = themeColor[t] || fallbackColors[idx++ % fallbackColors.length]; });
+      return map;
+    };
+
+    // Aggregate this-week / today ms per group (member projects resolved id->title),
+    // plus an implicit "Ungrouped" bucket for everything not claimed by a group.
+    const computeGroupStats = (metrics) => {
+      const groups = loadGroups();
+      const projectData = (metrics && metrics.projectData) || {};
+      const projectTodayData = (metrics && metrics.projectTodayData) || {};
+      const workingDaysElapsed = (metrics && metrics.workingDaysElapsed) || 0;
+      const prorate = (goalMs) => goalMs > 0 && workingDaysElapsed > 0 ? (goalMs / 6) * workingDaysElapsed : goalMs;
+
+      const idToTitle = {};
+      cachedProjects.forEach(p => { if (!p.isHiddenFromMenu) idToTitle[p.id] = p.title; });
+
+      const claimed = new Set();
+      const stats = groups.map((g, i) => {
+        const titles = [];
+        (g.projectIds || []).forEach(id => {
+          const t = idToTitle[id];
+          if (t != null && !claimed.has(t)) { titles.push(t); claimed.add(t); }
+        });
+        let weeklyMs = 0, todayMs = 0;
+        titles.forEach(t => { weeklyMs += projectData[t] || 0; todayMs += projectTodayData[t] || 0; });
+        const weeklyGoalMs = (parseFloat(g.weeklyGoalH) || 0) * 3600000;
+        const dailyGoalMs = (parseFloat(g.dailyGoalH) || 0) * 3600000;
+        return {
+          id: g.id, name: g.name || 'Group', color: g.color || groupColorForIndex(i),
+          projectTitles: titles, weeklyMs, todayMs, weeklyGoalMs, dailyGoalMs,
+          proratedGoalMs: prorate(weeklyGoalMs), isUngrouped: false
+        };
       });
 
-      const totals = {};
-      cachedTasks.forEach(task => {
-        // Skip tasks belonging to archived projects
-        if (task.projectId && !activeProjectIds.has(task.projectId)) return;
-        const pName = task.projectId && projectMap[task.projectId]
-          ? projectMap[task.projectId]
-          : 'Uncategorized';
-        const dayEntries = task.timeSpentOnDay || {};
-        for (const ms of Object.values(dayEntries)) {
-          totals[pName] = (totals[pName] || 0) + ms;
-        }
+      // Ungrouped: any project title with tracked time not claimed by a group
+      const ungrouped = [];
+      const seen = new Set();
+      Object.keys(projectData).concat(Object.keys(projectTodayData)).forEach(t => {
+        if (!claimed.has(t) && !seen.has(t)) { seen.add(t); ungrouped.push(t); }
       });
+      if (ungrouped.length) {
+        let weeklyMs = 0, todayMs = 0;
+        ungrouped.forEach(t => { weeklyMs += projectData[t] || 0; todayMs += projectTodayData[t] || 0; });
+        stats.push({
+          id: '__ungrouped__', name: 'Ungrouped', color: 'var(--text-color-muted, #9e9e9e)',
+          projectTitles: ungrouped, weeklyMs, todayMs, weeklyGoalMs: 0, dailyGoalMs: 0,
+          proratedGoalMs: 0, isUngrouped: true
+        });
+      }
+      return stats;
+    };
 
-      const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-      const goals = loadProjectGoals();
-      const weeklyGoalH = parseFloat(document.getElementById('goal-period').value) || 0;
-      const weeklyGoalMs = weeklyGoalH * 3600000;
-      const weeklyProjectTime = latestMetrics ? latestMetrics.projectData : {};
+    // --- TODAY view: per-group status blocks (most-behind first) ---
+    const renderTodayGroups = () => {
+      const list = document.getElementById('group-status-list');
+      if (!list) return;
+      const stats = computeGroupStats(latestMetrics);
+      const projectData = (latestMetrics && latestMetrics.projectData) || {};
 
-      // Colors: use project's theme color, fall back to cycling palette
-      const fallbackColors = ['#60a5fa', '#4ade80', '#f59e0b', '#a78bfa', '#f87171', '#2dd4bf', '#fb923c', '#e879f9'];
-      let fallbackIdx = 0;
-      const projectColors = {};
-      sorted.forEach(([name]) => {
-        projectColors[name] = projectColorByName[name] || fallbackColors[fallbackIdx++ % fallbackColors.length];
-      });
+      const allTitles = [];
+      stats.forEach(s => s.projectTitles.forEach(t => { if (!allTitles.includes(t)) allTitles.push(t); }));
+      const colors = buildProjectColorMap(allTitles);
 
-      if (sorted.length === 0) {
-        grid.innerHTML = '<div style="color: var(--text-color-muted, #9e9e9e); font-size: 0.875rem;">No time tracked yet.</div>';
-        summaryEl.textContent = '';
-        allocBarSection.classList.add('hidden');
-        focusNudge.classList.remove('visible');
+      // Order: groups with a weekly goal first (most hours behind first),
+      // then goal-less groups, then Ungrouped last.
+      const withGoal = stats.filter(s => !s.isUngrouped && s.weeklyGoalMs > 0)
+        .sort((a, b) => (b.proratedGoalMs - b.weeklyMs) - (a.proratedGoalMs - a.weeklyMs));
+      const noGoal = stats.filter(s => !s.isUngrouped && s.weeklyGoalMs <= 0);
+      const ungrouped = stats.filter(s => s.isUngrouped);
+      const ordered = withGoal.concat(noGoal, ungrouped);
+
+      if (ordered.length === 0) {
+        list.innerHTML = '<div class="group-empty">No time tracked yet. Use Manage Groups to create groups and set hour goals.</div>';
         return;
       }
 
-      // Check if any project has a goal set
-      const hasAnyGoal = sorted.some(([name]) => goals[name] != null && goals[name] !== '');
-      const totalWeeklyMs = Object.values(weeklyProjectTime).reduce((s, v) => s + v, 0);
-      // Prorate weekly goal to elapsed working days (6 working days per week)
-      const workingDaysElapsed = latestMetrics ? latestMetrics.workingDaysElapsed : 0;
-      const proratedGoalMs = weeklyGoalMs > 0 && workingDaysElapsed > 0
-        ? (weeklyGoalMs / 6) * workingDaysElapsed : weeklyGoalMs;
-
-      // --- Feature 1: Allocation balance bar ---
-      if (hasAnyGoal && totalWeeklyMs > 0) {
-        allocBarSection.classList.remove('hidden');
-        const actualBar = document.getElementById('alloc-bar-actual');
-        const targetBar = document.getElementById('alloc-bar-target');
-        const legendEl = document.getElementById('alloc-bar-legend');
-
-        // Project colors already computed above
-
-        // Actual allocation segments
-        actualBar.innerHTML = sorted.map(([name]) => {
-          const weeklyMs = weeklyProjectTime[name] || 0;
-          const pct = totalWeeklyMs > 0 ? (weeklyMs / totalWeeklyMs) * 100 : 0;
-          if (pct < 0.5) return '';
-          return `<div class="alloc-seg" style="width:${pct}%;background:${projectColors[name]}" title="${name}: ${Math.round(pct)}% actual"></div>`;
-        }).join('');
-
-        // Target allocation segments
-        const totalGoalPct = sorted.reduce((sum, [name]) => sum + (parseFloat(goals[name]) || 0), 0);
-        targetBar.innerHTML = sorted.map(([name]) => {
-          const goalPct = parseFloat(goals[name]) || 0;
-          if (goalPct < 0.5) return '';
-          const normalizedPct = totalGoalPct > 0 ? (goalPct / totalGoalPct) * 100 : 0;
-          return `<div class="alloc-seg" style="width:${normalizedPct}%;background:${projectColors[name]};opacity:0.6" title="${name}: ${Math.round(goalPct)}% target"></div>`;
-        }).join('');
-
-        // Legend: project name, actual% vs target%
-        legendEl.innerHTML = sorted.filter(([name]) => {
-          const weeklyMs = weeklyProjectTime[name] || 0;
-          const goalPct = parseFloat(goals[name]) || 0;
-          return weeklyMs > 0 || goalPct > 0;
-        }).map(([name]) => {
-          const weeklyMs = weeklyProjectTime[name] || 0;
-          const actualPct = totalWeeklyMs > 0 ? Math.round((weeklyMs / totalWeeklyMs) * 100) : 0;
-          const goalPct = Math.round(parseFloat(goals[name]) || 0);
-          return `<span class="alloc-legend-item"><span class="alloc-legend-dot" style="background:${projectColors[name]}"></span>${name}: <span class="alloc-legend-pct">${actualPct}%</span> / ${goalPct}%</span>`;
-        }).join('');
-      } else {
-        allocBarSection.classList.add('hidden');
-      }
-
-      // --- Feature 2: Focus nudge — find the most under-invested project (lowest % of prorated goal achieved) ---
-      let worstName = null;
-      if (hasAnyGoal && proratedGoalMs > 0 && totalWeeklyMs > 0) {
-        let worstPct = Infinity;
-        let bestPct = 0;
-        sorted.forEach(([name]) => {
-          const goalPct = parseFloat(goals[name]) || 0;
-          if (goalPct <= 0) return;
-          const projGoalMs = proratedGoalMs * (goalPct / 100);
-          const weeklyMs = weeklyProjectTime[name] || 0;
-          const achievedPct = (weeklyMs / projGoalMs) * 100;
-          const capped = Math.min(achievedPct, 100);
-          if (capped > bestPct) bestPct = capped;
-          if (achievedPct < 100 && achievedPct < worstPct) {
-            worstPct = achievedPct;
-            worstName = name;
-          }
-        });
-        // Only nudge when there's meaningful imbalance (≥10pp spread)
-        const spread = bestPct - (worstPct === Infinity ? bestPct : worstPct);
-        if (spread < 10) worstName = null;
-        if (worstName) {
-          const projGoalMs = proratedGoalMs * ((parseFloat(goals[worstName]) || 0) / 100);
-          const deficitMs = projGoalMs - (weeklyProjectTime[worstName] || 0);
-          focusNudge.classList.add('visible');
-          focusNudge.innerHTML = `<span class="focus-nudge-icon">\u25C9</span><span class="focus-nudge-text">Focus on: <span class="focus-nudge-project">${worstName}</span><span class="focus-nudge-detail">(${Math.round(worstPct)}% of goal, ${formatTime(deficitMs)} behind)</span></span>`;
-        } else {
-          focusNudge.classList.remove('visible');
+      const bar = (label, ms, goalMs) => {
+        if (goalMs > 0) {
+          const pct = Math.min((ms / goalMs) * 100, 100);
+          return `<div class="group-bar-row"><span class="group-bar-label">${label}</span>`
+            + `<div class="group-track"><div class="group-fill" style="width:${pct}%;background:${gradientColor(pct)}"></div></div>`
+            + `<span class="group-bar-pct">${Math.round(pct)}% of ${(goalMs / 3600000).toFixed(1)}h</span></div>`;
         }
-      } else {
-        focusNudge.classList.remove('visible');
-      }
-
-      // --- Feature 3: Color-coded card borders based on deviation ---
-      // Pre-compute deviation for each project
-      const deviationMap = {};
-      if (hasAnyGoal && proratedGoalMs > 0) {
-        sorted.forEach(([name]) => {
-          const goalPct = parseFloat(goals[name]) || 0;
-          if (goalPct <= 0) { deviationMap[name] = null; return; }
-          const projGoalMs = proratedGoalMs * (goalPct / 100);
-          const weeklyMs = weeklyProjectTime[name] || 0;
-          // ratio: 1.0 = on target, <1 = under, >1 = over
-          deviationMap[name] = projGoalMs > 0 ? weeklyMs / projGoalMs : null;
-        });
-      }
-
-      const getDeviationBorder = (name) => {
-        const ratio = deviationMap[name];
-        if (ratio == null) return 'border-color: var(--divider-color, #333)';
-        // Continuous red → yellow → green based on ratio (0→1)
-        const pct = Math.min(ratio * 100, 100);
-        const r = pct < 50 ? 248 : Math.round(248 - (pct - 50) * 2 * (248 - 74) / 100);
-        const g = pct < 50 ? Math.round(113 + pct * 2 * (222 - 113) / 100) : 222;
-        const b = pct < 50 ? Math.round(113 + pct * 2 * (128 - 113) / 100) : 128;
-        return `border-color: rgb(${r},${g},${b})`;
+        return `<div class="group-bar-row"><span class="group-bar-label">${label}</span>`
+          + `<div class="group-track"></div><span class="group-bar-pct">${formatTime(ms)}</span></div>`;
       };
 
-      grid.innerHTML = sorted.map(([name, ms], i) => {
-        const pct = goals[name] != null ? goals[name] : '';
-        const weeklyMs = weeklyProjectTime[name] || 0;
-        const projGoalMs = proratedGoalMs > 0 && pct !== '' ? proratedGoalMs * (parseFloat(pct) / 100) : 0;
-        const progressPct = projGoalMs > 0 ? Math.min((weeklyMs / projGoalMs) * 100, 100) : 0;
-        const color = projectColors[name];
-        const weeklyLabel = weeklyMs > 0 ? formatTime(weeklyMs) : '0h 0m';
-        const goalLabel = projGoalMs > 0
-          ? `${Math.round(progressPct)}% of ${formatTime(projGoalMs)} goal`
-          : '';
-        const borderStyle = getDeviationBorder(name);
-        const glowClass = name === worstName ? ' focus-glow' : '';
+      list.innerHTML = ordered.map(s => {
+        let behindHtml = '<span class="group-behind muted">No weekly goal</span>';
+        if (s.weeklyGoalMs > 0 && s.proratedGoalMs > 0) {
+          const diff = s.weeklyMs - s.proratedGoalMs;
+          const h = Math.abs(diff / 3600000).toFixed(1);
+          behindHtml = diff >= 0
+            ? `<span class="group-behind ahead">${h}h ahead</span>`
+            : `<span class="group-behind behind">${h}h behind</span>`;
+        } else if (s.isUngrouped) {
+          behindHtml = '';
+        }
+        const projRows = s.projectTitles.slice()
+          .sort((a, b) => (projectData[b] || 0) - (projectData[a] || 0))
+          .map(t => `<span class="group-proj"><span class="dot" style="background:${colors[t] || '#60a5fa'}"></span>${t} <b>${formatTime(projectData[t] || 0)}</b></span>`)
+          .join('');
+        const projHtml = projRows
+          ? `<div class="group-projects">${projRows}</div>`
+          : '<div class="group-projects"><span class="group-empty">No projects assigned.</span></div>';
         return `
-          <div class="project-hour-card${glowClass}" style="${borderStyle}">
-            <div class="ph-header">
-              <span class="ph-name" title="${name}">${name}</span>
-              <div class="ph-goal-row">
-                <input type="number" class="ph-goal-input" data-project="${name}" min="0" max="100" step="1" placeholder="—" value="${pct}">
-                <span class="ph-goal-label">%</span>
-              </div>
+          <div class="group-block" style="--group-color:${s.color}">
+            <div class="group-block-header">
+              <span class="group-dot"></span>
+              <span class="group-name">${s.name}</span>
+              ${behindHtml}
             </div>
-            <span class="ph-value">${formatTime(ms)}</span>
-            <span class="ph-weekly">This week: ${weeklyLabel}${goalLabel ? ' · ' + goalLabel : ''}</span>
-            ${projGoalMs > 0 ? `<div class="ph-progress-track"><div class="ph-progress-fill" style="width:${progressPct}%;background:${color}"></div></div>` : ''}
-          </div>
-        `;
+            ${bar('Week', s.weeklyMs, s.proratedGoalMs)}
+            ${bar('Today', s.todayMs, s.dailyGoalMs)}
+            ${projHtml}
+          </div>`;
       }).join('');
+    };
 
-      // Update allocation summary
-      const totalAlloc = sorted.reduce((sum, [name]) => sum + (parseFloat(goals[name]) || 0), 0);
-      summaryEl.innerHTML = totalAlloc > 0
-        ? `Weekly goal allocation: <strong>${totalAlloc}%</strong> of 100%`
-        : '';
+    // --- RETROSPECTIVE view: group allocation balance bar (actual vs target) ---
+    const renderAllocBar = () => {
+      const section = document.getElementById('alloc-bar-section');
+      const emptyMsg = document.getElementById('alloc-bar-empty');
+      if (!section) return;
+      const stats = computeGroupStats(latestMetrics).filter(s => !s.isUngrouped);
+      const totalWeeklyMs = stats.reduce((sum, s) => sum + s.weeklyMs, 0);
+      const totalGoalMs = stats.reduce((sum, s) => sum + s.weeklyGoalMs, 0);
+      const hasGoal = stats.some(s => s.weeklyGoalMs > 0);
+      if (!hasGoal || totalWeeklyMs <= 0) {
+        section.classList.add('hidden');
+        if (emptyMsg) emptyMsg.style.display = '';
+        return;
+      }
+      section.classList.remove('hidden');
+      if (emptyMsg) emptyMsg.style.display = 'none';
+      const actualBar = document.getElementById('alloc-bar-actual');
+      const targetBar = document.getElementById('alloc-bar-target');
+      const legendEl = document.getElementById('alloc-bar-legend');
+      actualBar.innerHTML = stats.map(s => {
+        const pct = totalWeeklyMs > 0 ? (s.weeklyMs / totalWeeklyMs) * 100 : 0;
+        if (pct < 0.5) return '';
+        return `<div class="alloc-seg" style="width:${pct}%;background:${s.color}" title="${s.name}: ${Math.round(pct)}% actual"></div>`;
+      }).join('');
+      targetBar.innerHTML = stats.map(s => {
+        if (s.weeklyGoalMs < 1) return '';
+        const pct = totalGoalMs > 0 ? (s.weeklyGoalMs / totalGoalMs) * 100 : 0;
+        return `<div class="alloc-seg" style="width:${pct}%;background:${s.color};opacity:0.6" title="${s.name}: ${Math.round(pct)}% target"></div>`;
+      }).join('');
+      legendEl.innerHTML = stats.filter(s => s.weeklyMs > 0 || s.weeklyGoalMs > 0).map(s => {
+        const actualPct = totalWeeklyMs > 0 ? Math.round((s.weeklyMs / totalWeeklyMs) * 100) : 0;
+        const targetPct = totalGoalMs > 0 ? Math.round((s.weeklyGoalMs / totalGoalMs) * 100) : 0;
+        return `<span class="alloc-legend-item"><span class="alloc-legend-dot" style="background:${s.color}"></span>${s.name}: <span class="alloc-legend-pct">${actualPct}%</span> / ${targetPct}%</span>`;
+      }).join('');
+    };
 
-      // Attach change listeners to percentage inputs
-      grid.querySelectorAll('.ph-goal-input').forEach(input => {
-        input.addEventListener('change', () => {
-          const g = loadProjectGoals();
-          const val = input.value.trim();
-          if (val === '' || isNaN(parseFloat(val))) {
-            delete g[input.dataset.project];
-          } else {
-            g[input.dataset.project] = Math.max(0, Math.min(100, parseFloat(val)));
-          }
-          saveProjectGoals(g);
-          if (latestMetrics) renderProjectLifetimeHours();
+    // --- RETROSPECTIVE view: all-time hours per project ---
+    const renderAllTimeHours = () => {
+      const grid = document.getElementById('project-hours-grid');
+      if (!grid) return;
+      const activeProjectIds = new Set();
+      const projectMap = {};
+      cachedProjects.forEach(p => {
+        if (!p.isHiddenFromMenu) { projectMap[p.id] = p.title; activeProjectIds.add(p.id); }
+      });
+      const totals = {};
+      cachedTasks.forEach(task => {
+        if (task.projectId && !activeProjectIds.has(task.projectId)) return;
+        const pName = task.projectId && projectMap[task.projectId] ? projectMap[task.projectId] : 'Uncategorized';
+        for (const ms of Object.values(task.timeSpentOnDay || {})) totals[pName] = (totals[pName] || 0) + ms;
+      });
+      const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+      if (sorted.length === 0) {
+        grid.innerHTML = '<div style="color: var(--text-color-muted, #9e9e9e); font-size: 0.875rem;">No time tracked yet.</div>';
+        return;
+      }
+      const colors = buildProjectColorMap(sorted.map(([n]) => n));
+      const weeklyProjectTime = (latestMetrics && latestMetrics.projectData) || {};
+      grid.innerHTML = sorted.map(([name, ms]) => {
+        const weeklyMs = weeklyProjectTime[name] || 0;
+        return `
+          <div class="project-hour-card">
+            <div class="ph-header"><span class="ph-name" title="${name}">${name}</span></div>
+            <span class="ph-value" style="color:${colors[name]}">${formatTime(ms)}</span>
+            <span class="ph-weekly">This week: ${weeklyMs > 0 ? formatTime(weeklyMs) : '0h 0m'}</span>
+          </div>`;
+      }).join('');
+    };
+
+    // --- MANAGE GROUPS modal ---
+    const persistAndRefresh = () => processData(cachedTasks, cachedProjects);
+
+    const attachModalListeners = () => {
+      document.querySelectorAll('#group-editors .group-editor-row').forEach(row => {
+        const id = row.dataset.id;
+        row.querySelectorAll('.modal-input').forEach(input => {
+          input.addEventListener('change', () => {
+            const groups = loadGroups();
+            const g = groups.find(x => x.id === id);
+            if (!g) return;
+            const field = input.dataset.field;
+            if (field === 'name') {
+              g.name = input.value;
+            } else {
+              const v = parseFloat(input.value);
+              g[field] = isNaN(v) ? 0 : Math.max(0, v);
+            }
+            saveGroups(groups);
+            persistAndRefresh();
+          });
+        });
+        const del = row.querySelector('[data-action="delete"]');
+        if (del) del.addEventListener('click', () => {
+          saveGroups(loadGroups().filter(x => x.id !== id));
+          renderGroupsModal();
+          persistAndRefresh();
         });
       });
+      document.querySelectorAll('#assign-list .assign-row').forEach(row => {
+        const pid = row.dataset.project;
+        const sel = row.querySelector('[data-action="assign"]');
+        if (sel) sel.addEventListener('change', () => {
+          const groups = loadGroups();
+          groups.forEach(g => { g.projectIds = (g.projectIds || []).filter(x => x !== pid); });
+          const target = groups.find(g => g.id === sel.value);
+          if (target) target.projectIds.push(pid);
+          saveGroups(groups);
+          renderGroupsModal();
+          persistAndRefresh();
+        });
+      });
+    };
+
+    const renderGroupsModal = () => {
+      const groups = loadGroups();
+      const editors = document.getElementById('group-editors');
+      const assign = document.getElementById('assign-list');
+      if (!editors || !assign) return;
+      const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+      editors.innerHTML = groups.length ? groups.map(g => `
+        <div class="group-editor-row" data-id="${g.id}">
+          <input class="modal-input ge-name" type="text" data-field="name" value="${esc(g.name)}" placeholder="Group name">
+          <input class="modal-input num" type="number" min="0" step="0.5" data-field="weeklyGoalH" value="${g.weeklyGoalH != null ? g.weeklyGoalH : ''}" placeholder="0"><span class="ge-unit">h/wk</span>
+          <input class="modal-input num" type="number" min="0" step="0.5" data-field="dailyGoalH" value="${g.dailyGoalH != null ? g.dailyGoalH : ''}" placeholder="0"><span class="ge-unit">h/day</span>
+          <button class="ge-del" data-action="delete" title="Delete group">×</button>
+        </div>`).join('') : '<div class="group-empty">No groups yet. Create one below.</div>';
+
+      const projects = cachedProjects.filter(p => !p.isHiddenFromMenu);
+      const groupOf = {};
+      groups.forEach(g => (g.projectIds || []).forEach(id => { groupOf[id] = g.id; }));
+      const colorMap = buildProjectColorMap(projects.map(p => p.title));
+      assign.innerHTML = projects.length ? projects.map(p => {
+        const dot = (p.theme && p.theme.primary) || colorMap[p.title] || '#60a5fa';
+        const opts = ['<option value="">None</option>'].concat(groups.map(g =>
+          `<option value="${g.id}"${groupOf[p.id] === g.id ? ' selected' : ''}>${esc(g.name)}</option>`)).join('');
+        return `<div class="assign-row" data-project="${p.id}">
+          <span class="dot" style="background:${dot}"></span>
+          <span class="ar-name" title="${esc(p.title)}">${esc(p.title)}</span>
+          <select class="modal-select" data-action="assign">${opts}</select>
+        </div>`;
+      }).join('') : '<div class="group-empty">No projects found.</div>';
+
+      attachModalListeners();
+    };
+
+    const openGroupsModal = () => { renderGroupsModal(); document.getElementById('groups-modal').classList.remove('hidden'); };
+    const closeGroupsModal = () => document.getElementById('groups-modal').classList.add('hidden');
+    document.getElementById('manage-groups-btn').addEventListener('click', openGroupsModal);
+    document.getElementById('groups-modal-close').addEventListener('click', closeGroupsModal);
+    document.getElementById('groups-modal').addEventListener('click', (e) => { if (e.target.id === 'groups-modal') closeGroupsModal(); });
+    document.getElementById('add-group-btn').addEventListener('click', () => {
+      const groups = loadGroups();
+      groups.push({ id: genGroupId(), name: 'New Group', weeklyGoalH: 0, dailyGoalH: 0, projectIds: [], color: groupColorForIndex(groups.length) });
+      saveGroups(groups);
+      renderGroupsModal();
+      persistAndRefresh();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGroupsModal(); });
+
+    // --- RETROSPECTIVE view: "This Week in Review" summary (always rendered) ---
+    const renderWeekInReview = (metrics) => {
+      const banner = document.getElementById('weekly-review');
+      if (!banner) return;
+      const weekStartDay = parseInt(document.getElementById('week-start-day').value, 10);
+      const weekDates = metrics.weeklyData.labels;
+      const weekData = metrics.weeklyData.data;
+      if (weekDates.length === 0) { banner.classList.remove('visible'); return; }
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      const workingCount = Math.min(weekDates.length - 1, 6) || weekDates.length;
+      const workingData = weekData.slice(0, workingCount);
+      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
+      const studiedThresholdMs = dailyGoalMs / 3;
+      const daysStudied = workingData.filter(ms => ms > 0 && (dailyGoalMs <= 0 || ms >= studiedThresholdMs)).length;
+
+      const avgMs = metrics.totalTimeSpent / 6;
+      const mean = workingData.reduce((a, b) => a + b, 0) / (workingData.length || 1);
+      const variance = workingData.reduce((a, v) => a + (v - mean) ** 2, 0) / (workingData.length || 1);
+      const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
+      const maxCv = Math.sqrt(Math.max(workingData.length - 1, 1));
+      const steadiness = Math.round((1 - Math.min(cv / maxCv, 1)) * 100);
+
+      const today = new Date();
+      const dayTotals = {};
+      cachedTasks.forEach(task => {
+        for (const [d, ms] of Object.entries(task.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms;
+      });
+      const weekTotals = [];
+      const daysBack = (today.getDay() - weekStartDay + 7) % 7;
+      const currentWeekStart = new Date(today);
+      currentWeekStart.setDate(today.getDate() - daysBack);
+      for (let w = 3; w >= 0; w--) {
+        const ws = new Date(currentWeekStart);
+        ws.setDate(currentWeekStart.getDate() - w * 7);
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 6);
+        const range = getDatesInRange(toLocalDateStr(ws), toLocalDateStr(we));
+        let sum = 0;
+        range.forEach(d => { sum += dayTotals[d] || 0; });
+        weekTotals.push(sum);
+      }
+      const trendHtml = weekTotals.map((ms, i) => {
+        const h = (ms / 3600000).toFixed(1) + 'h';
+        const isCurrent = i === weekTotals.length - 1;
+        return `<span style="${isCurrent ? 'font-weight:700;color:var(--text-color,#fff)' : ''}">${h}</span>`;
+      }).join(' <span style="color:var(--text-color-muted,#9e9e9e)">→</span> ');
+
+      const dayTilesHtml = weekDates.map((d, i) => {
+        const dt = new Date(d + 'T00:00:00');
+        const name = dayNames[dt.getDay()];
+        const isRest = i === weekDates.length - 1;
+        const studied = weekData[i] > 0 && (dailyGoalMs <= 0 || weekData[i] >= studiedThresholdMs);
+        const cls = isRest ? 'rest' : (studied ? 'studied' : 'missed');
+        return `<div class="wr-day ${cls}" title="${formatTime(weekData[i])}">${name}</div>`;
+      }).join('');
+
+      banner.innerHTML = `
+        <h3 class="weekly-review-title">This Week in Review</h3>
+        <div class="wr-days">${dayTilesHtml}</div>
+        <div class="weekly-review-grid">
+          <div class="wr-stat">
+            <div class="wr-stat-value">${daysStudied}<span style="font-size:0.9rem;font-weight:400">/6</span></div>
+            <div class="wr-stat-label">Days studied</div>
+          </div>
+          <div class="wr-stat">
+            <div class="wr-stat-value">${formatTime(avgMs)}</div>
+            <div class="wr-stat-label">Daily average</div>
+          </div>
+          <div class="wr-stat">
+            <div class="wr-stat-value">${steadiness}%</div>
+            <div class="wr-stat-label">Steadiness</div>
+          </div>
+        </div>
+        <div class="wr-stat" style="text-align:center;margin-top:0.25rem;">
+          <div style="font-size:0.85rem;">${trendHtml}</div>
+          <div class="wr-stat-label">4-week trend</div>
+        </div>
+      `;
+      banner.classList.add('visible');
     };
 
     const updateDashboardUI = (metrics) => {
       latestMetrics = metrics;
 
-      // Weekly Review Banner — shown only on the rest day (last day of the week)
-      const weekStartDay = parseInt(document.getElementById('week-start-day').value, 10);
-      const restDayNum = (weekStartDay + 6) % 7;
-      const banner = document.getElementById('weekly-review');
-      const weekDates = metrics.weeklyData.labels;
-      const weekData = metrics.weeklyData.data;
-      if (new Date().getDay() === restDayNum && weekDates.length > 0) {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-        // Working days = all except the last (rest day)
-        const workingCount = Math.min(weekDates.length - 1, 6);
-        const workingData = weekData.slice(0, workingCount);
-        const dailyGoalMs = (parseFloat(document.getElementById('goal-today').value) || 0) * 3600000;
-        const studiedThresholdMs = dailyGoalMs / 3;
-        const daysStudied = workingData.filter(ms => ms > 0 && ms >= studiedThresholdMs).length;
-
-        // Average daily (working days only)
-        const avgMs = metrics.totalTimeSpent / 6;
-
-        // Steadiness score: 100% = perfectly even, 0% = all time on one day
-        const mean = workingData.reduce((a, b) => a + b, 0) / workingData.length;
-        const variance = workingData.reduce((a, v) => a + (v - mean) ** 2, 0) / workingData.length;
-        const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
-        // Max CV for N items is sqrt(N-1) when all mass is on one item
-        const maxCv = Math.sqrt(workingData.length - 1);
-        const steadiness = Math.round((1 - Math.min(cv / maxCv, 1)) * 100);
-
-        // Week-over-week trend: last 4 weeks totals from task data
-        const today = new Date();
-        const dayTotals = {};
-        cachedTasks.forEach(task => {
-          for (const [d, ms] of Object.entries(task.timeSpentOnDay || {})) {
-            dayTotals[d] = (dayTotals[d] || 0) + ms;
-          }
-        });
-        const weekTotals = [];
-        const daysBack = (today.getDay() - weekStartDay + 7) % 7;
-        const currentWeekStart = new Date(today);
-        currentWeekStart.setDate(today.getDate() - daysBack);
-        for (let w = 3; w >= 0; w--) {
-          const ws = new Date(currentWeekStart);
-          ws.setDate(currentWeekStart.getDate() - w * 7);
-          const we = new Date(ws);
-          we.setDate(ws.getDate() + 6);
-          const range = getDatesInRange(toLocalDateStr(ws), toLocalDateStr(we));
-          let sum = 0;
-          range.forEach(d => { sum += dayTotals[d] || 0; });
-          weekTotals.push(sum);
-        }
-        const trendHtml = weekTotals.map((ms, i) => {
-          const h = (ms / 3600000).toFixed(1) + 'h';
-          const isCurrent = i === weekTotals.length - 1;
-          return `<span style="${isCurrent ? 'font-weight:700;color:var(--text-color,#fff)' : ''}">${h}</span>`;
-        }).join(' <span style="color:var(--text-color-muted,#9e9e9e)">→</span> ');
-
-        // Day tiles — green only when the day reached at least 1/3 of the daily goal
-        const dayTilesHtml = weekDates.map((d, i) => {
-          const dt = new Date(d + 'T00:00:00');
-          const name = dayNames[dt.getDay()];
-          const isRest = i === weekDates.length - 1;
-          const studied = weekData[i] > 0 && weekData[i] >= studiedThresholdMs;
-          const cls = isRest ? 'rest' : (studied ? 'studied' : 'missed');
-          return `<div class="wr-day ${cls}" title="${formatTime(weekData[i])}">${name}</div>`;
-        }).join('');
-
-        banner.innerHTML = `
-          <h3 class="weekly-review-title">This Week in Review</h3>
-          <div class="wr-days">${dayTilesHtml}</div>
-          <div class="weekly-review-grid">
-            <div class="wr-stat">
-              <div class="wr-stat-value">${daysStudied}<span style="font-size:0.9rem;font-weight:400">/6</span></div>
-              <div class="wr-stat-label">Days studied</div>
-            </div>
-            <div class="wr-stat">
-              <div class="wr-stat-value">${formatTime(avgMs)}</div>
-              <div class="wr-stat-label">Daily average</div>
-            </div>
-            <div class="wr-stat">
-              <div class="wr-stat-value">${steadiness}%</div>
-              <div class="wr-stat-label">Steadiness</div>
-            </div>
-          </div>
-          <div class="wr-stat" style="text-align:center;margin-top:0.25rem;">
-            <div style="font-size:0.85rem;">${trendHtml}</div>
-            <div class="wr-stat-label">4-week trend</div>
-          </div>
-        `;
-        banner.classList.add('visible');
-      } else {
-        banner.classList.remove('visible');
-      }
+      // Weekly review is rendered in the Retrospective view
+      renderWeekInReview(metrics);
 
       document.getElementById('stat-time').innerText = formatTime(metrics.totalTimeSpent);
       document.getElementById('stat-today-time').innerText = formatTime(metrics.todayTimeSpent);
@@ -954,9 +1096,12 @@
       renderComparison('stat-time-cmp', metrics.totalTimeSpent, bestPrevWeek);
       renderComparison('stat-today-cmp', metrics.todayTimeSpent, metrics.yesterdayTimeSpent);
 
-      // Period time goal progress (prorated to elapsed working days out of 6)
-      const periodGoalH = parseFloat(document.getElementById('goal-period').value) || 0;
+      // Period time goal progress (prorated to elapsed working days out of 6).
+      // Weekly goal is the sum of every group's weekly goal.
+      const periodGoalH = getTotalWeeklyGoalH();
       const periodGoalMs = periodGoalH * 3600000;
+      document.getElementById('goal-period-label').textContent = periodGoalH > 0
+        ? `Goal: ${(+periodGoalH.toFixed(2))}h / week` : 'No weekly goal set';
       const proratedGoalMs = periodGoalMs > 0 && metrics.workingDaysElapsed > 0
         ? (periodGoalMs / 6) * metrics.workingDaysElapsed : periodGoalMs;
       const periodPct = proratedGoalMs > 0 ? Math.min((metrics.totalTimeSpent / proratedGoalMs) * 100, 100) : 0;
@@ -990,9 +1135,27 @@
         deficitEl.className = 'deficit-indicator';
       }
 
-      // Today time goal progress
-      const todayGoalH = parseFloat(document.getElementById('goal-today').value) || 0;
+      // Required pace to still hit the weekly goal in the remaining working days
+      const paceEl = document.getElementById('stat-time-pace');
+      const remainingDays = Math.max(0, 6 - metrics.workingDaysElapsed);
+      if (periodGoalMs > 0 && metrics.totalTimeSpent >= periodGoalMs) {
+        paceEl.textContent = 'Weekly goal reached';
+        paceEl.className = 'urgency-line ahead';
+      } else if (periodGoalMs > 0 && remainingDays > 0) {
+        const perDayH = (periodGoalMs - metrics.totalTimeSpent) / remainingDays / 3600000;
+        const dGoalH = getTotalDailyGoalH();
+        paceEl.textContent = `Need ${perDayH.toFixed(1)}h/day for ${remainingDays} more day${remainingDays !== 1 ? 's' : ''}`;
+        paceEl.className = (dGoalH > 0 && perDayH > dGoalH) ? 'urgency-line behind' : 'urgency-line muted';
+      } else {
+        paceEl.textContent = '';
+        paceEl.className = 'urgency-line';
+      }
+
+      // Today time goal progress (goal = sum of every group's daily goal)
+      const todayGoalH = getTotalDailyGoalH();
       const todayGoalMs = todayGoalH * 3600000;
+      document.getElementById('goal-today-label').textContent = todayGoalH > 0
+        ? `Goal: ${(+todayGoalH.toFixed(2))}h / day` : 'No daily goal set';
       const todayPct = todayGoalMs > 0 ? Math.min((metrics.todayTimeSpent / todayGoalMs) * 100, 100) : 0;
       const todayBar = document.getElementById('stat-today-progress');
       todayBar.style.width = `${todayPct}%`;
@@ -1002,11 +1165,29 @@
       const b = todayPct < 50 ? Math.round(113 + todayPct * 2 * (128 - 113) / 100) : 128;
       todayBar.style.backgroundColor = `rgb(${r},${g},${b})`;
       document.getElementById('stat-today-pct').innerText = todayGoalMs > 0
-        ? `${Math.round(todayPct)}% of ${todayGoalH}h goal`
+        ? `${Math.round(todayPct)}% of ${(+todayGoalH.toFixed(2))}h goal`
         : '';
 
+      // Time left to reach today's goal
+      const todayLeftEl = document.getElementById('stat-today-left');
+      if (todayGoalMs > 0) {
+        const leftMs = todayGoalMs - metrics.todayTimeSpent;
+        if (leftMs > 0) {
+          todayLeftEl.textContent = `${formatTime(leftMs)} left to reach today's goal`;
+          todayLeftEl.className = 'urgency-line behind';
+        } else {
+          todayLeftEl.textContent = "Today's goal reached";
+          todayLeftEl.className = 'urgency-line ahead';
+        }
+      } else {
+        todayLeftEl.textContent = '';
+        todayLeftEl.className = 'urgency-line';
+      }
+
       updateBarChart();
-      renderProjectLifetimeHours();
+      renderTodayGroups();
+      renderAllocBar();
+      renderAllTimeHours();
       renderWindDownBanner();
       renderHeatmap();
     };
@@ -1409,6 +1590,21 @@
     const processData = (tasksArr, projectsArr) => {
       cachedTasks = tasksArr;
       cachedProjects = projectsArr;
+      // One-time migration: seed a single "All" group from the legacy global goals
+      if (localStorage.getItem('sp-dashboard-groups') === null) {
+        const lw = parseFloat(localStorage.getItem('sp-dashboard-goal-period'));
+        const ld = parseFloat(localStorage.getItem('sp-dashboard-goal-today'));
+        if (!isNaN(lw) || !isNaN(ld)) {
+          saveGroups([{
+            id: genGroupId(), name: 'All',
+            weeklyGoalH: isNaN(lw) ? 0 : lw, dailyGoalH: isNaN(ld) ? 0 : ld,
+            projectIds: projectsArr.filter(p => !p.isHiddenFromMenu).map(p => p.id),
+            color: groupColorForIndex(0)
+          }]);
+        } else {
+          saveGroups([]);
+        }
+      }
       // Compute "this week" range based on the week-start-day selector
       const endObj = new Date();
       const startObj = new Date();
@@ -1458,6 +1654,7 @@
         workingDaysElapsed,
         weeklyData: { labels: dateRange, data: new Array(dateRange.length).fill(0) },
         projectData: {},
+        projectTodayData: {},
       };
 
       const now = Date.now();
@@ -1536,6 +1733,7 @@
         if (task.timeSpentOnDay) {
           if (task.timeSpentOnDay[todayStr]) {
             metrics.todayTimeSpent += task.timeSpentOnDay[todayStr];
+            metrics.projectTodayData[pName] = (metrics.projectTodayData[pName] || 0) + task.timeSpentOnDay[todayStr];
           }
           if (task.timeSpentOnDay[yesterdayStr]) {
             metrics.yesterdayTimeSpent += task.timeSpentOnDay[yesterdayStr];
@@ -1608,6 +1806,11 @@
     window.toLocalDateStr = toLocalDateStr;
     window.getDatesInRange = getDatesInRange;
     window.processData = processData;
+    window.loadGroups = loadGroups;
+    window.saveGroups = saveGroups;
+    window.computeGroupStats = computeGroupStats;
+    window.getTotalWeeklyGoalH = getTotalWeeklyGoalH;
+    window.getTotalDailyGoalH = getTotalDailyGoalH;
     window.updateBarChart = updateBarChart;
     window.renderHeatmap = renderHeatmap;
 

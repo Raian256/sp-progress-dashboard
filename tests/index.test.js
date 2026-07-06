@@ -133,6 +133,74 @@ describe('Date Range Reporter UI', () => {
     });
   });
 
+  describe('Project Groups', () => {
+    it('migrates legacy global goals into a single "All" group', () => {
+      localStorage.clear();
+      localStorage.setItem('sp-dashboard-goal-period', '10');
+      localStorage.setItem('sp-dashboard-goal-today', '2');
+      const projects = [{ id: 'p1', title: 'Alpha' }, { id: 'p2', title: 'Beta' }];
+      window.processData([], projects);
+
+      const groups = window.loadGroups();
+      expect(groups.length).toBe(1);
+      expect(groups[0].name).toBe('All');
+      expect(groups[0].weeklyGoalH).toBe(10);
+      expect(groups[0].dailyGoalH).toBe(2);
+      expect(groups[0].projectIds).toEqual(['p1', 'p2']);
+    });
+
+    it('does not migrate when a groups key already exists', () => {
+      localStorage.clear();
+      localStorage.setItem('sp-dashboard-goal-period', '10');
+      localStorage.setItem('sp-dashboard-groups', '[]');
+      window.processData([], [{ id: 'p1', title: 'Alpha' }]);
+      expect(window.loadGroups()).toEqual([]);
+    });
+
+    it('computeGroupStats sums member weekly/today ms and surfaces Ungrouped', () => {
+      localStorage.clear();
+      const projects = [
+        { id: 'p1', title: 'Alpha' },
+        { id: 'p2', title: 'Beta' },
+        { id: 'p3', title: 'Gamma' }
+      ];
+      window.saveGroups([
+        { id: 'g1', name: 'Work', weeklyGoalH: 6, dailyGoalH: 1, projectIds: ['p1', 'p2'], color: '#60a5fa' }
+      ]);
+      // Sets the cachedProjects the resolver reads (migration is skipped, key exists)
+      window.processData([], projects);
+
+      const stats = window.computeGroupStats({
+        projectData: { Alpha: 3600000, Beta: 7200000, Gamma: 1800000 },
+        projectTodayData: { Alpha: 1800000 },
+        workingDaysElapsed: 3
+      });
+
+      const work = stats.find(s => s.name === 'Work');
+      expect(work.weeklyMs).toBe(10800000); // 1h + 2h
+      expect(work.todayMs).toBe(1800000);   // 0.5h
+      expect(work.proratedGoalMs).toBe(10800000); // 6h/6*3 working days
+
+      const ungrouped = stats.find(s => s.isUngrouped);
+      expect(ungrouped).toBeTruthy();
+      expect(ungrouped.projectTitles).toContain('Gamma');
+      expect(ungrouped.weeklyMs).toBe(1800000);
+    });
+
+    it('summary weekly goal equals the sum of group goals', () => {
+      localStorage.clear();
+      window.saveGroups([
+        { id: 'g1', name: 'A', weeklyGoalH: 10, dailyGoalH: 1, projectIds: [] },
+        { id: 'g2', name: 'B', weeklyGoalH: 5, dailyGoalH: 2, projectIds: [] }
+      ]);
+      window.processData([], []);
+      expect(window.getTotalWeeklyGoalH()).toBe(15);
+      expect(window.getTotalDailyGoalH()).toBe(3);
+      expect(document.getElementById('goal-period-label').textContent).toContain('15');
+      expect(document.getElementById('goal-today-label').textContent).toContain('3');
+    });
+  });
+
   describe('Navigation & Interactivity', () => {
     it('week-start-day selector should recompute date range', () => {
       const weekStartDaySelect = document.getElementById('week-start-day');

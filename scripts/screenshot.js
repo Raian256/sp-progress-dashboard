@@ -24,13 +24,13 @@ import fs from 'fs';
   await page.screenshot({ path: dashPath, fullPage: true });
   console.log('Dashboard screenshot saved to', dashPath);
 
-  // switch to detailed list and capture second screenshot
-  await page.evaluate(() => window.switchTab && window.switchTab('details'));
+  // switch to the Retrospective view and capture second screenshot
+  await page.evaluate(() => document.getElementById('tab-retro').click());
   // give DOM a moment to render the new view
   await new Promise(resolve => setTimeout(resolve, 500));
   const listPath = path.join(outDir, 'detailed_list.png');
   await page.screenshot({ path: listPath, fullPage: true });
-  console.log('Detailed list screenshot saved to', listPath);
+  console.log('Retrospective screenshot saved to', listPath);
 
   await browser.close();
 })();
