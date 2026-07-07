@@ -265,6 +265,9 @@
     .modal-input.num::-webkit-outer-spin-button, .modal-input.num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .ge-unit { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); }
     .ge-del { background: none; border: none; color: #f87171; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; }
+    .block-editor-row .ge-name { flex: 1; min-width: 3rem; }
+    .block-editor-row .modal-select { width: auto; max-width: none; }
+    .block-editor-row .modal-input.be-time { width: auto; }
     .assign-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--divider-color, #333); }
     .assign-row .ar-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; }
     .assign-row .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
@@ -283,8 +286,10 @@
       --td-ink: var(--text-color, #f4f4f5);
       --td-muted: var(--text-color-muted, #9aa0a6);
       --td-track: rgba(150, 150, 150, 0.16);
-      --td-go: #56c8a6;                       /* calm teal-green = progress */
+      --td-go: #56c8a6;                       /* calm teal-green = progress (hard block) */
       --td-go-soft: rgba(86, 200, 166, 0.16);
+      --td-soft: #7f93b0;                      /* muted slate = low-stakes (soft block) */
+      --td-soft-fill: rgba(127, 147, 176, 0.5);
       --td-warn: #e0a458;                     /* muted amber = time squeeze */
       --td-radius: 14px;
       font-variant-numeric: tabular-nums;
@@ -301,12 +306,21 @@
     .runway-need b { color: var(--td-ink); font-weight: 600; }
     .runway-need.squeeze, .runway-need.squeeze b { color: var(--td-warn); }
     .runway-need.met, .runway-need.met b { color: var(--td-go); }
-    /* Thin day-timeline: the usable day depleting toward wind-down (distinct from
-       the thicker goal-progress bar below it). Green = time still left. */
-    .runway-day { position: relative; height: 6px; border-radius: 4px; background: var(--td-track); overflow: hidden; margin: 0.55rem 0 0.3rem; }
-    .runway-day-left { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 4px; background: linear-gradient(90deg, rgba(86,200,166,0.3), rgba(86,200,166,0.6)); transition: width 0.6s ease; }
-    .runway-day-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--td-ink); opacity: 0.55; transition: left 0.6s ease; }
+    /* Thin day-timeline: the day drawn as its work blocks, with the gaps (breaks)
+       left empty. Each block fills as its own time elapses; the current block is
+       outlined. Segments are tinted by intensity (teal = hard, slate = soft). */
+    .runway-day { position: relative; height: 8px; margin: 0.55rem 0 0.3rem; }
+    .tl-seg { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--td-track); overflow: hidden; }
+    .tl-seg-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--td-soft-fill); transition: width 0.6s ease; }
+    .tl-seg.intensity-hard .tl-seg-fill { background: var(--td-go); }
+    .tl-seg.intensity-soft .tl-seg-fill { background: var(--td-soft-fill); }
+    .tl-seg.current { box-shadow: 0 0 0 1.5px var(--block-accent, var(--td-go)); }
+    .tl-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--td-ink); opacity: 0.5; transition: left 0.6s ease; }
     .runway-day-caption { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--td-muted); margin-bottom: 0.7rem; }
+    /* Intensity accent, consumed by the eyebrow tint + current-segment outline. */
+    #view-today .intensity-hard { --block-accent: var(--td-go); }
+    #view-today .intensity-soft { --block-accent: var(--td-soft); }
+    .runway.intensity-hard .runway-top .runway-eyebrow, .runway.intensity-soft .runway-top .runway-eyebrow { color: var(--block-accent); }
     .runway-bar-label { font-size: 0.68rem; color: var(--td-muted); margin-bottom: 0.3rem; }
     .runway-bar { position: relative; height: 14px; border-radius: 8px; background: var(--td-track); overflow: hidden; }
     .runway-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: var(--td-go-soft); transition: width 0.6s ease; }
@@ -357,9 +371,9 @@
     .focus-depth { margin-top: 0.4rem; font-size: 0.85rem; color: var(--td-muted); }
     .focus-depth b { color: var(--td-ink); font-weight: 600; }
     .focus-runway { margin-top: 0.15rem; font-size: 0.8rem; color: var(--td-muted); opacity: 0.85; }
-    .focus-day { position: relative; width: min(220px, 55%); height: 4px; margin: 0.4rem auto 0; border-radius: 3px; background: var(--td-track); overflow: hidden; opacity: 0.85; }
-    .focus-day-left { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(86,200,166,0.3), rgba(86,200,166,0.55)); transition: width 0.6s ease; }
-    .focus-day-now { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--td-ink); opacity: 0.4; transition: left 0.6s ease; }
+    .focus-day { position: relative; width: min(220px, 55%); height: 5px; margin: 0.4rem auto 0; opacity: 0.85; }
+    .focus-day .tl-seg { border-radius: 3px; }
+    .focus-day .tl-now { top: -1px; bottom: -1px; opacity: 0.4; }
     .focus-others { margin-top: 1.6rem; width: 100%; }
     .focus-others summary { cursor: pointer; list-style: none; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--td-muted); padding: 0.5rem 0; text-align: left; }
     .focus-others summary::-webkit-details-marker { display: none; }
@@ -513,20 +527,6 @@
           <h3 class="section-title">Preferences</h3>
           <div class="settings-fields">
             <div class="setting-field">
-              <label for="wind-down-hour">Wind down at</label>
-              <select id="wind-down-hour">
-                <option value="">Off</option>
-                <option value="15">3 PM</option>
-                <option value="16">4 PM</option>
-                <option value="17">5 PM</option>
-                <option value="18">6 PM</option>
-                <option value="19">7 PM</option>
-                <option value="20">8 PM</option>
-                <option value="21">9 PM</option>
-                <option value="22">10 PM</option>
-              </select>
-            </div>
-            <div class="setting-field">
               <label for="week-start-day">Week starts on</label>
               <select id="week-start-day">
                 <option value="1">Monday</option>
@@ -539,6 +539,13 @@
               </select>
             </div>
           </div>
+        </div>
+
+        <div class="project-hours-section">
+          <h3 class="section-title">Work blocks</h3>
+          <div class="modal-section-title">The day split into blocks — the Today view counts down to the current one</div>
+          <div id="block-editors"></div>
+          <button class="btn-primary" id="add-block-btn">+ Add block</button>
         </div>
 
         <div class="project-hours-section">
@@ -690,7 +697,7 @@
       // When Retrospective becomes visible its containers finally have real
       // width, so re-render the charts that depend on measured dimensions.
       if (active === 'retro') { try { updateBarChart(); renderHeatmap(); } catch (e) {} }
-      if (active === 'settings') { try { renderGroupsSettings(); } catch (e) {} }
+      if (active === 'settings') { try { renderGroupsSettings(); renderBlocksSettings(); } catch (e) {} }
     };
     document.getElementById('tab-today').addEventListener('click', () => setActiveView('today'));
     document.getElementById('tab-retro').addEventListener('click', () => setActiveView('retro'));
@@ -698,22 +705,15 @@
     const savedView = localStorage.getItem('sp-dashboard-active-view');
     if (savedView && savedView !== 'today') setActiveView(savedView);
 
-    // Wind-down hour setting
-    const windDownSelect = document.getElementById('wind-down-hour');
-    const savedWindDown = localStorage.getItem('sp-dashboard-wind-down-hour');
-    if (savedWindDown !== null) windDownSelect.value = savedWindDown;
-    windDownSelect.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-wind-down-hour', windDownSelect.value);
-      if (latestMetrics) renderWindDownBanner();
-    });
+    // Wind-down banner: the task-nag fires once the day's last work block has ended.
     const renderWindDownBanner = () => {
       const banner = document.getElementById('wind-down-banner');
-      const hourStr = windDownSelect.value;
-      if (!hourStr) { banner.classList.remove('visible'); return; }
+      const lastEnd = getLastBlockEndHour();
+      if (lastEnd === null) { banner.classList.remove('visible'); return; }
 
       const now = new Date();
       const currentHour = now.getHours();
-      const targetHour = parseInt(hourStr, 10);
+      const targetHour = Math.floor(lastEnd);
       // Active window: targetHour..23 and 0..4 (ends at 5 AM)
       const inWindow = currentHour >= targetHour || currentHour < 5;
       if (!inWindow) { banner.classList.remove('visible'); return; }
@@ -755,6 +755,42 @@
     const genGroupId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
     const getTotalWeeklyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.weeklyGoalH) || 0), 0);
     const getTotalDailyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.dailyGoalH) || 0), 0);
+
+    // --- WORK BLOCKS: the day split into time windows, each with an intensity ---
+    // Blocks shape the Today runway's *time horizon* (the current block only); the
+    // daily goal stays a single number. intensity 'hard' = prime time, full pressure
+    // (amber squeeze on); 'soft' = easy/overflow, calm (squeeze cue suppressed, softer
+    // accent). Persisted in localStorage as sp-dashboard-blocks.
+    const BLOCKS_KEY = 'sp-dashboard-blocks';
+    const DEFAULT_BLOCKS = [
+      { id: 'b-morning',   label: 'Morning',   start: 8,  end: 14, intensity: 'hard' },
+      { id: 'b-afternoon', label: 'Afternoon', start: 16, end: 20, intensity: 'soft' }
+    ];
+    const genBlockId = () => 'blk-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+    const clampHour = (h) => Math.min(Math.max(Number.isFinite(h) ? h : 0, 0), 24);
+    const sanitizeBlock = (b, i) => {
+      const start = clampHour(b && b.start);
+      const end = clampHour(b && b.end);
+      const label = (b && typeof b.label === 'string' && b.label.trim()) ? b.label.trim() : 'Block ' + (i + 1);
+      return { id: (b && b.id) || genBlockId(), label, start, end, intensity: (b && b.intensity === 'soft') ? 'soft' : 'hard' };
+    };
+    const normalizeBlocks = (arr) => (Array.isArray(arr) ? arr : [])
+      .map(sanitizeBlock).filter(b => b.end > b.start).sort((a, b) => a.start - b.start);
+    const saveBlocks = (b) => localStorage.setItem(BLOCKS_KEY, JSON.stringify(b));
+    const loadBlocks = () => {
+      const raw = localStorage.getItem(BLOCKS_KEY);
+      if (raw !== null) { try { return normalizeBlocks(JSON.parse(raw)); } catch { return []; } }
+      // Migrate once: a legacy single wind-down hour becomes one hard block spanning
+      // the old anchor->wind window; otherwise seed the default two-block day.
+      const legacy = localStorage.getItem('sp-dashboard-wind-down-hour');
+      const seeded = (legacy !== null && legacy !== '')
+        ? [{ id: genBlockId(), label: 'Day', start: 6, end: parseInt(legacy, 10), intensity: 'hard' }]
+        : DEFAULT_BLOCKS.map(b => ({ ...b }));
+      const norm = normalizeBlocks(seeded);
+      saveBlocks(norm);
+      return norm;
+    };
+    const getLastBlockEndHour = () => { const bl = loadBlocks(); return bl.length ? bl[bl.length - 1].end : null; };
 
     // Continuous red (0%) -> yellow (50%) -> green (100%) fill color
     const gradientColor = (pct) => {
@@ -840,27 +876,71 @@
     let lastPullWall = Date.now(); // last data pull, for live extrapolation
     let prevTodayByTaskId = null;  // for the delta fallback
 
-    const WIND_DOWN_DEFAULT = 22;  // fallback wind-down hour when unset
-    const DAY_ANCHOR_HOUR = 6;     // nominal start of the usable day (day-timeline scale)
-
     const escHtml = (s) => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const formatGoalH = (h) => (Number.isInteger(h) ? h + 'h' : h.toFixed(1) + 'h');
-    const formatHour = (h) => { const ap = h >= 12 && h < 24 ? 'PM' : 'AM'; let x = h % 12; if (x === 0) x = 12; return `${x} ${ap}`; };
-    const getWindDownHour = () => {
-      const el = document.getElementById('wind-down-hour');
-      const n = parseInt(el ? el.value : '', 10);
-      return Number.isFinite(n) ? n : WIND_DOWN_DEFAULT;
+    // Fractional hour (e.g. 14.5) -> "2:30 PM"; whole hours drop the minutes.
+    const formatHour = (h) => {
+      const whole = Math.floor(h), mins = Math.round((h - whole) * 60);
+      const ap = whole >= 12 && whole < 24 ? 'PM' : 'AM';
+      let x = whole % 12; if (x === 0) x = 12;
+      return mins ? `${x}:${String(mins).padStart(2, '0')} ${ap}` : `${x} ${ap}`;
+    };
+    const hourOf = (d) => d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+
+    // Pure: which block (if any) contains this fractional hour. Testable.
+    const blockAtTime = (blocks, nowH) => {
+      for (const b of (blocks || [])) { if (nowH >= b.start && nowH < b.end) return b; }
+      return null;
     };
 
-    // Pure: how the remaining usable day relates to the daily goal still owed.
-    const computeRunway = (now, windHour, dailyGoalMs, todayMs) => {
-      const nowH = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-      const leftMs = Math.max(0, windHour - nowH) * 3600000;
+    // Pure: relate the *current block's* remaining time (the felt, proximal horizon)
+    // and the day's total remaining usable capacity (summed across all blocks) to the
+    // daily goal still owed. leftMs is always the current block only — never the whole
+    // day. squeeze stays an honest daily judgement (needed >= capacity across blocks),
+    // so a morning doesn't show a false squeeze just because the goal can't all fit
+    // before 2 PM; soft-block suppression of the cue is left to the renderer.
+    const computeRunway = (now, blocks, dailyGoalMs, todayMs) => {
+      const list = (blocks || []).slice().sort((a, b) => a.start - b.start);
+      const nowH = hourOf(now);
+      const block = blockAtTime(list, nowH);
+      const nextBlock = list.find(b => b.start > nowH) || null;
+
+      let state, leftMs;
+      if (block) { state = 'active'; leftMs = Math.max(0, block.end - nowH) * 3600000; }
+      else if (nextBlock) { state = 'upcoming'; leftMs = Math.max(0, nextBlock.start - nowH) * 3600000; }
+      else { state = 'done'; leftMs = 0; }
+
+      let capacityMs = 0;
+      for (const b of list) { const from = Math.max(b.start, nowH); if (b.end > from) capacityMs += (b.end - from) * 3600000; }
+
       const neededMs = Math.max(0, (dailyGoalMs || 0) - (todayMs || 0));
-      const neededPct = leftMs > 0 ? Math.min((neededMs / leftMs) * 100, 100) : (neededMs > 0 ? 100 : 0);
-      const squeeze = neededMs > 0 && neededMs >= leftMs;
-      return { leftMs, neededMs, neededPct, squeeze };
+      const neededPct = capacityMs > 0 ? Math.min((neededMs / capacityMs) * 100, 100) : (neededMs > 0 ? 100 : 0);
+      const squeeze = neededMs > 0 && neededMs >= capacityMs;
+      return { state, block, nextBlock, leftMs, capacityMs, neededMs, neededPct, squeeze };
+    };
+
+    // Inner HTML for the thin day-timeline: one segment per block (gaps left empty),
+    // each filled by its own elapsed time, the current block outlined, plus a now
+    // marker. Scale spans the first block's start to the last block's end. Shared by
+    // the Launchpad runway and the Focus peripheral strip.
+    const renderDayTimeline = (now, blocks, curBlock) => {
+      const list = (blocks || []).slice().sort((a, b) => a.start - b.start);
+      if (!list.length) return '';
+      const spanStart = list[0].start, spanEnd = list[list.length - 1].end;
+      const span = Math.max(0.5, spanEnd - spanStart);
+      const nowH = hourOf(now);
+      const pos = (h) => Math.min(Math.max((h - spanStart) / span, 0), 1) * 100;
+      const segs = list.map(b => {
+        const left = pos(b.start), width = pos(b.end) - left;
+        const fillH = Math.min(Math.max(nowH, b.start), b.end);
+        const fillPct = b.end > b.start ? ((fillH - b.start) / (b.end - b.start)) * 100 : 0;
+        const isCur = curBlock && b.id === curBlock.id;
+        return `<span class="tl-seg intensity-${b.intensity}${isCur ? ' current' : ''}" style="left:${left}%;width:${width}%">`
+          + `<span class="tl-seg-fill" style="width:${fillPct}%"></span></span>`;
+      }).join('');
+      const marker = (nowH >= spanStart && nowH <= spanEnd) ? `<span class="tl-now" style="left:${pos(nowH)}%"></span>` : '';
+      return segs + marker;
     };
 
     // Pure: which group (if any) owns the tracked task. Testable.
@@ -915,36 +995,51 @@
       const todayMs = metrics.todayTimeSpent || 0;
       const weekMs = metrics.totalTimeSpent || 0;
       const now = new Date();
-      const windHour = getWindDownHour();
-      const { leftMs, neededMs, neededPct, squeeze } = computeRunway(now, windHour, dailyGoalMs, todayMs);
+      const blocks = loadBlocks();
+      const res = computeRunway(now, blocks, dailyGoalMs, todayMs);
+      const { state, block, nextBlock, leftMs, neededMs, squeeze } = res;
 
-      // Day timeline: fraction of the nominal usable day (DAY_ANCHOR_HOUR → wind-down)
-      // already elapsed. A felt gauge of the depleting day, not an exact clock.
-      const nowH = now.getHours() + now.getMinutes() / 60;
-      const dayWindowH = Math.max(1, windHour - DAY_ANCHOR_HOUR);
-      const dayElapsedPct = Math.min(Math.max((nowH - DAY_ANCHOR_HOUR) / dayWindowH, 0), 1) * 100;
-
-      // The bar always means the same thing: today's progress toward the daily
-      // goal. Consistency matters more than cleverness here. The remaining-day
-      // pressure lives in the big number and the status line, not the bar.
+      // The goal bar always means the same thing: today's progress toward the daily
+      // goal. Consistency matters more than cleverness here — the block/time pressure
+      // lives in the big number and status line, not the bar.
       const goalPct = dailyGoalMs > 0 ? Math.min((todayMs / dailyGoalMs) * 100, 100) : 0;
 
-      let eyebrow, big, needClass, needHtml;
-      if (leftMs <= 0) {
+      // Soft (easy/overflow) blocks stay calm: the amber squeeze cue is suppressed
+      // on them, even when the daily goal is genuinely tight.
+      const showSqueeze = squeeze && (!block || block.intensity !== 'soft');
+      const curBlock = block || nextBlock;      // drives the timeline highlight + accent
+
+      let eyebrow, big, needClass = '', needHtml, caption = '', captionLead = '';
+      if (state === 'done') {
         eyebrow = 'The day is done';
         big = `Day's over`;
-        if (dailyGoalMs <= 0) { needClass = ''; needHtml = `${formatTime(todayMs)} logged today`; }
+        if (dailyGoalMs <= 0) needHtml = `${formatTime(todayMs)} logged today`;
         else if (neededMs <= 0) { needClass = 'met'; needHtml = `Today's goal met`; }
-        else { needClass = ''; needHtml = `${formatTime(todayMs)} of ${formatGoalH(dailyGoalMs / 3600000)} — rest now`; }
+        else needHtml = `${formatTime(todayMs)} of ${formatGoalH(dailyGoalMs / 3600000)} — rest now`;
+      } else if (state === 'upcoming') {
+        // Between blocks (or before the first): a calm, guilt-free pause. The goal bar
+        // is frozen, not draining, and nothing squeezes.
+        const label = nextBlock ? nextBlock.label : 'Next block';
+        eyebrow = 'Up next';
+        big = `${escHtml(label)} <span class="u">in ${formatTime(leftMs)}</span>`;
+        captionLead = 'break'; caption = nextBlock ? `starts ${formatHour(nextBlock.start)}` : '';
+        if (dailyGoalMs <= 0) needHtml = `${formatTime(todayMs)} logged`;
+        else if (neededMs <= 0) { needClass = 'met'; needHtml = `Today's goal met`; }
+        else needHtml = `${formatTime(neededMs)} left for today`;
       } else {
-        eyebrow = 'Usable day left';
-        big = `${formatTime(leftMs)} <span class="u">left</span>`;
-        if (dailyGoalMs <= 0) { needClass = ''; needHtml = 'No daily goal set'; }
+        // Active block: the felt countdown is this block only.
+        eyebrow = escHtml(block.label);
+        big = `${formatTime(leftMs)} <span class="u">left in block</span>`;
+        captionLead = 'this block'; caption = `ends ${formatHour(block.end)}`;
+        if (dailyGoalMs <= 0) needHtml = 'No daily goal set';
         else if (neededMs <= 0) { needClass = 'met'; needHtml = `Today's goal met`; }
-        else if (squeeze) { needClass = 'squeeze'; needHtml = `<b>${formatTime(neededMs)}</b> still needed — it's tight`; }
-        else { needClass = ''; needHtml = `<b>${formatTime(neededMs)}</b> still needed`; }
+        else if (showSqueeze) { needClass = 'squeeze'; needHtml = `<b>${formatTime(neededMs)}</b> still needed — it's tight`; }
+        else needHtml = `<b>${formatTime(neededMs)}</b> still needed`;
       }
 
+      const intensityClass = curBlock ? ' intensity-' + curBlock.intensity : '';
+      const timelineInner = blocks.length ? renderDayTimeline(now, blocks, curBlock) : '';
+      el.className = 'runway' + intensityClass;
       el.innerHTML = `
         <div class="runway-top">
           <div>
@@ -953,11 +1048,8 @@
           </div>
           <div class="runway-need ${needClass}">${needHtml}</div>
         </div>
-        <div class="runway-day">
-          <div class="runway-day-left" style="width:${100 - dayElapsedPct}%"></div>
-          <div class="runway-day-now" style="left:${dayElapsedPct}%"></div>
-        </div>
-        <div class="runway-day-caption"><span>the day</span><span>ends ${formatHour(windHour)}</span></div>
+        ${timelineInner ? `<div class="runway-day">${timelineInner}</div>` : ''}
+        ${caption ? `<div class="runway-day-caption"><span>${captionLead}</span><span>${caption}</span></div>` : ''}
         <div class="runway-bar-label">Today's goal</div>
         <div class="runway-bar"><div class="runway-need-fill calm" style="width:${goalPct}%"></div></div>
         <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(todayMs)} today &middot; ${formatTime(weekMs)} this week</div>`;
@@ -1079,7 +1171,7 @@
         <div class="focus-countdown" id="focus-countdown"></div>
         <div class="focus-depth" id="focus-depth"></div>
         <div class="focus-runway" id="focus-runway"></div>
-        <div class="focus-day" id="focus-day"><div class="focus-day-left" id="focus-day-left"></div><div class="focus-day-now" id="focus-day-now"></div></div>
+        <div class="focus-day" id="focus-day"></div>
         ${renderFocusOthers(stats, res.groupId)}`;
       updateFocusLive();
     };
@@ -1120,18 +1212,16 @@
       const runwayEl = document.getElementById('focus-runway');
       if (runwayEl) {
         const now = new Date();
-        const windHour = getWindDownHour();
-        const dayLeftMs = computeRunway(now, windHour, 0, 0).leftMs;
-        runwayEl.textContent = dayLeftMs > 0
-          ? `${formatTime(dayLeftMs)} of usable day left`
-          : 'Past wind-down — wrap up soon';
-        // Same depleting day-timeline as the Launchpad, but compact and peripheral.
-        const nowH = now.getHours() + now.getMinutes() / 60;
-        const elapsedPct = Math.min(Math.max((nowH - DAY_ANCHOR_HOUR) / Math.max(1, windHour - DAY_ANCHOR_HOUR), 0), 1) * 100;
-        const dl = document.getElementById('focus-day-left');
-        const dn = document.getElementById('focus-day-now');
-        if (dl) dl.style.width = (100 - elapsedPct) + '%';
-        if (dn) dn.style.left = elapsedPct + '%';
+        const blocks = loadBlocks();
+        const r = computeRunway(now, blocks, 0, 0);
+        runwayEl.textContent = r.state === 'active'
+          ? `${formatTime(r.leftMs)} left in ${r.block.label}`
+          : r.state === 'upcoming'
+            ? `${r.nextBlock.label} in ${formatTime(r.leftMs)}`
+            : 'Past your last block — wrap up soon';
+        // Same block timeline as the Launchpad, but compact and peripheral.
+        const dayEl = document.getElementById('focus-day');
+        if (dayEl) dayEl.innerHTML = blocks.length ? renderDayTimeline(now, blocks, r.block || r.nextBlock) : '';
       }
     };
 
@@ -1313,6 +1403,62 @@
       persistAndRefresh();
     });
 
+    // --- WORK BLOCKS settings editor ---
+    const hourToTime = (h) => { const w = Math.floor(h), m = Math.round((h - w) * 60); return String(w).padStart(2, '0') + ':' + String(m).padStart(2, '0'); };
+    const timeToHour = (s) => { const [hh, mm] = String(s || '').split(':').map(Number); return (Number.isFinite(hh) ? hh : 0) + (Number.isFinite(mm) ? mm : 0) / 60; };
+
+    const renderBlocksSettings = () => {
+      const editors = document.getElementById('block-editors');
+      if (!editors) return;
+      const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      const blocks = loadBlocks();
+      editors.innerHTML = blocks.length ? blocks.map(b => `
+        <div class="block-editor-row group-editor-row" data-id="${b.id}">
+          <input class="modal-input ge-name" type="text" data-field="label" value="${esc(b.label)}" placeholder="Block name">
+          <input class="modal-input be-time" type="time" data-field="start" value="${hourToTime(b.start)}">
+          <span class="ge-unit">to</span>
+          <input class="modal-input be-time" type="time" data-field="end" value="${hourToTime(b.end)}">
+          <select class="modal-select" data-field="intensity">
+            <option value="hard"${b.intensity === 'hard' ? ' selected' : ''}>Hard</option>
+            <option value="soft"${b.intensity === 'soft' ? ' selected' : ''}>Soft</option>
+          </select>
+          <button class="ge-del" data-action="delete" title="Delete block">&times;</button>
+        </div>`).join('') : '<div class="group-empty">No blocks. Add one, or the Today view shows just today\'s total.</div>';
+
+      editors.querySelectorAll('.block-editor-row').forEach(row => {
+        const id = row.dataset.id;
+        row.querySelectorAll('[data-field]').forEach(input => {
+          input.addEventListener('change', () => {
+            const blocks = loadBlocks();
+            const b = blocks.find(x => x.id === id);
+            if (!b) return;
+            const f = input.dataset.field;
+            if (f === 'label') b.label = input.value;
+            else if (f === 'intensity') b.intensity = input.value === 'soft' ? 'soft' : 'hard';
+            else b[f] = timeToHour(input.value);
+            saveBlocks(blocks);
+            if (latestMetrics) { renderTodayView(latestMetrics); renderWindDownBanner(); }
+          });
+        });
+        const del = row.querySelector('[data-action="delete"]');
+        if (del) del.addEventListener('click', () => {
+          saveBlocks(loadBlocks().filter(x => x.id !== id));
+          renderBlocksSettings();
+          if (latestMetrics) { renderTodayView(latestMetrics); renderWindDownBanner(); }
+        });
+      });
+    };
+
+    document.getElementById('add-block-btn').addEventListener('click', () => {
+      const blocks = loadBlocks();
+      const lastEnd = blocks.length ? blocks[blocks.length - 1].end : 9;
+      const start = Math.min(lastEnd + 1, 23);
+      blocks.push({ id: genBlockId(), label: 'New block', start, end: Math.min(start + 2, 24), intensity: 'hard' });
+      saveBlocks(blocks);
+      renderBlocksSettings();
+      if (latestMetrics) { renderTodayView(latestMetrics); renderWindDownBanner(); }
+    });
+
     // --- RETROSPECTIVE view: "This Week in Review" summary (always rendered) ---
     const renderWeekInReview = (metrics) => {
       const banner = document.getElementById('weekly-review');
@@ -1413,7 +1559,7 @@
       // in-progress edit (the periodic refresh would otherwise steal focus).
       const settingsVisible = !document.getElementById('view-settings').classList.contains('hidden');
       const editingSettings = document.getElementById('view-settings').contains(document.activeElement);
-      if (settingsVisible && !editingSettings) renderGroupsSettings();
+      if (settingsVisible && !editingSettings) { renderGroupsSettings(); renderBlocksSettings(); }
     };
 
     const updateBarChart = () => {
@@ -2039,6 +2185,9 @@
     window.renderHeatmap = renderHeatmap;
     window.resolveTrackingMode = resolveTrackingMode;
     window.computeRunway = computeRunway;
+    window.blockAtTime = blockAtTime;
+    window.loadBlocks = loadBlocks;
+    window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
 
     // --- SP INTEGRATION / NATIVE IFRAME COMMS ---
@@ -2149,6 +2298,17 @@
           { id: "g-math", name: "Math",      weeklyGoalH: 9,  dailyGoalH: 2, projectIds: ["p2"], color: "#9ece6a" },
           { id: "g-lang", name: "Languages", weeklyGoalH: 5,  dailyGoalH: 1, projectIds: ["p3"], color: "#e0af68" }
         ]);
+
+        // The two-block day (hard morning, soft afternoon), so ?scenario= previews
+        // and screenshots exercise the block-driven runway deterministically. The
+        // 'squeeze' scenario keeps only the hard morning so an honest squeeze (goal
+        // can't fit the remaining capacity) actually fires late in that block.
+        saveBlocks(scenario === 'squeeze'
+          ? [{ id: "b-morning", label: "Morning", start: 8, end: 14, intensity: "hard" }]
+          : [
+              { id: "b-morning",   label: "Morning",   start: 8,  end: 14, intensity: "hard" },
+              { id: "b-afternoon", label: "Afternoon", start: 16, end: 20, intensity: "soft" }
+            ]);
 
         cachedTasks = [
           { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",

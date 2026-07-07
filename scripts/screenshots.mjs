@@ -3,9 +3,11 @@
 //   npm run screenshots
 //
 // Each shot loads sp-dashboard/index.html standalone (mock data) with a
-// ?scenario= that fixes the data, plus a faked wall-clock so time-of-day
-// states (usable-day / squeeze / day's-over) are deterministic. Add a scenario
-// by dropping an entry in SHOTS below — the mock data lives in index.html's
+// ?scenario= that fixes the data, plus a faked wall-clock so the block-driven
+// states (active block / between-blocks break / squeeze / day's-over) are
+// deterministic. The mock day is two blocks — hard Morning 8–2, soft Afternoon
+// 4–8 — so the faked clock selects which state renders. Add a scenario by
+// dropping an entry in SHOTS below; the mock data lives in index.html's
 // standalone bootstrap.
 import puppeteer from 'puppeteer';
 import path from 'path';
@@ -17,16 +19,20 @@ const FILE = 'file://' + path.join(ROOT, 'sp-dashboard', 'index.html');
 
 // name, scenario query, "HH:MM" faked clock, optional tab to open, height.
 const SHOTS = [
-  { name: '01-idle',            scenario: 'idle',            at: '14:05', h: 780, desc: 'Launchpad — a normal afternoon' },
-  { name: '02-idle-squeeze',    scenario: 'idle',            at: '20:35', h: 780, desc: "Launchpad — the day's running out (squeeze)" },
-  { name: '03-idle-goal-met',   scenario: 'met',             at: '16:00', h: 780, desc: 'Launchpad — every lane met for today' },
-  { name: '04-idle-day-over',   scenario: 'idle',            at: '23:40', h: 780, desc: 'Launchpad — past wind-down' },
+  { name: '01-idle',            scenario: 'idle',            at: '10:00', h: 780, desc: 'Launchpad — the hard morning block, counting down to 2 PM' },
+  { name: '02-idle-squeeze',    scenario: 'squeeze',         at: '13:30', h: 780, desc: "Launchpad — the hard block's nearly over and the goal won't fit (squeeze)" },
+  { name: '03-idle-goal-met',   scenario: 'met',             at: '17:00', h: 780, desc: 'Launchpad — every lane met for today' },
+  { name: '04-idle-day-over',   scenario: 'idle',            at: '21:00', h: 780, desc: 'Launchpad — past the last block' },
   { name: '05-idle-no-groups',  scenario: 'empty',           at: '10:00', h: 620, desc: 'Launchpad — no groups yet; time shows as Ungrouped' },
-  { name: '06-focus',           scenario: 'focus',           at: '14:05', h: 900, desc: 'Focus — mid-session, closing the daily goal' },
-  { name: '07-focus-goal-met',  scenario: 'focus-met',       at: '15:00', h: 900, desc: 'Focus — goal met, stretch to keep rolling' },
+  { name: '06-focus',           scenario: 'focus',           at: '10:30', h: 900, desc: 'Focus — mid-session in the morning block' },
+  { name: '07-focus-goal-met',  scenario: 'focus-met',       at: '12:00', h: 900, desc: 'Focus — goal met, stretch to keep rolling' },
   { name: '08-focus-ungrouped', scenario: 'focus-ungrouped', at: '11:20', h: 900, desc: 'Focus — a project in no lane (no daily goal)' },
-  { name: '09-retrospective',   scenario: 'idle',            at: '14:05', h: 1500, tab: 'tab-retro', desc: 'Retrospective view' },
-  { name: '10-settings',        scenario: 'idle',            at: '14:05', h: 720, tab: 'tab-settings', desc: 'Settings view' },
+  // Keep the tab-switching shots (retro/settings) last: opening a tab persists the
+  // active view to localStorage, which the next shot would otherwise inherit.
+  { name: '11-idle-break',      scenario: 'idle',            at: '14:45', h: 780, desc: 'Launchpad — between blocks; the guilt-free break, bar paused' },
+  { name: '12-idle-afternoon',  scenario: 'idle',            at: '17:30', h: 780, desc: 'Launchpad — the soft afternoon block; calmer, no squeeze' },
+  { name: '09-retrospective',   scenario: 'idle',            at: '10:00', h: 1500, tab: 'tab-retro', desc: 'Retrospective view' },
+  { name: '10-settings',        scenario: 'idle',            at: '10:00', h: 760, tab: 'tab-settings', desc: 'Settings view — Work blocks + groups' },
 ];
 
 const fakeClock = (hhmm) => `(() => {

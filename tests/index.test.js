@@ -241,20 +241,74 @@ describe('Date Range Reporter UI', () => {
       expect(res.groupId).toBe('g2');
     });
 
-    it('computeRunway relates remaining day to the goal still owed', () => {
-      const at = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
-      // 20:00, wind-down 22:00 -> 2h left; goal 6h, done 4h -> 2h still needed == left => squeeze
-      const r1 = window.computeRunway(at(20), 22, 6 * 3600000, 4 * 3600000);
-      expect(Math.round(r1.leftMs / 3600000)).toBe(2);
-      expect(Math.round(r1.neededMs / 3600000)).toBe(2);
-      expect(r1.squeeze).toBe(true);
-      // Goal already met -> nothing needed, not a squeeze
-      const r2 = window.computeRunway(at(18), 22, 6 * 3600000, 6 * 3600000);
-      expect(r2.neededMs).toBe(0);
-      expect(r2.squeeze).toBe(false);
-      // Past wind-down -> no usable day left
-      const r3 = window.computeRunway(at(23), 22, 6 * 3600000, 1 * 3600000);
+    const at = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
+    const twoBlocks = () => [
+      { id: 'm', label: 'Morning', start: 8, end: 14, intensity: 'hard' },
+      { id: 'a', label: 'Afternoon', start: 16, end: 20, intensity: 'soft' }
+    ];
+
+    it('computeRunway resolves the current block and relates capacity to the goal', () => {
+      const blocks = twoBlocks();
+      // 10:00, inside the morning block -> ~4h left in THIS block (not the whole day);
+      // capacity spans the morning tail (4h) + the whole afternoon (4h) = 8h.
+      const r1 = window.computeRunway(at(10), blocks, 6 * 3600000, 2 * 3600000);
+      expect(r1.state).toBe('active');
+      expect(r1.block.id).toBe('m');
+      expect(Math.round(r1.leftMs / 3600000)).toBe(4);
+      expect(Math.round(r1.capacityMs / 3600000)).toBe(8);
+      expect(r1.squeeze).toBe(false); // 4h owed fits in 8h capacity
+
+      // 15:00, in the break -> upcoming, counting down to the afternoon start (1h).
+      const r2 = window.computeRunway(at(15), blocks, 6 * 3600000, 2 * 3600000);
+      expect(r2.state).toBe('upcoming');
+      expect(r2.nextBlock.id).toBe('a');
+      expect(Math.round(r2.leftMs / 3600000)).toBe(1);
+
+      // 21:00, past the last block -> done, nothing left.
+      const r3 = window.computeRunway(at(21), blocks, 6 * 3600000, 2 * 3600000);
+      expect(r3.state).toBe('done');
       expect(r3.leftMs).toBe(0);
+
+      // Goal already met -> nothing needed, never a squeeze.
+      const r4 = window.computeRunway(at(10), blocks, 6 * 3600000, 6 * 3600000);
+      expect(r4.neededMs).toBe(0);
+      expect(r4.squeeze).toBe(false);
+    });
+
+    it('computeRunway squeeze is an honest daily judgement across blocks', () => {
+      const blocks = twoBlocks();
+      // 13:30: only 0.5h left in the morning block, but the afternoon still holds 4h,
+      // so a 3h debt is NOT a squeeze (capacity 4.5h >= 3h) — no false morning squeeze.
+      const notTight = window.computeRunway(at(13, 30), blocks, 6 * 3600000, 3 * 3600000);
+      expect(notTight.squeeze).toBe(false);
+      // With only the hard morning block, that same 3h debt at 13:30 (0.5h capacity) IS a squeeze.
+      const tight = window.computeRunway(at(13, 30), [blocks[0]], 6 * 3600000, 3 * 3600000);
+      expect(tight.state).toBe('active');
+      expect(tight.squeeze).toBe(true);
+    });
+
+    it('blockAtTime picks the block containing the hour (end exclusive)', () => {
+      const blocks = twoBlocks();
+      expect(window.blockAtTime(blocks, 10).id).toBe('m');
+      expect(window.blockAtTime(blocks, 15)).toBe(null); // in the gap
+      expect(window.blockAtTime(blocks, 14)).toBe(null); // end is exclusive
+      expect(window.blockAtTime(blocks, 17).id).toBe('a');
+    });
+
+    it('loadBlocks seeds defaults and migrates a legacy wind-down hour', () => {
+      // Absent -> the default two-block day.
+      localStorage.clear();
+      const def = window.loadBlocks();
+      expect(def.length).toBe(2);
+      expect(def[0].start).toBe(8);
+      expect(def[1].intensity).toBe('soft');
+      // Legacy single wind-down hour -> one hard block ending at that hour.
+      localStorage.clear();
+      localStorage.setItem('sp-dashboard-wind-down-hour', '22');
+      const migrated = window.loadBlocks();
+      expect(migrated.length).toBe(1);
+      expect(migrated[0].end).toBe(22);
+      expect(migrated[0].intensity).toBe('hard');
     });
   });
 
