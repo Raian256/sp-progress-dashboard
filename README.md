@@ -24,19 +24,19 @@ The **Today** view is one of two screens, depending on whether a timer is runnin
 
 ![The Launchpad](screenshots/01-idle.png)
 
-The usable day is drawn as a bar that empties toward your wind-down time, so "time left" is something you see, not just a number. Below it, a streak of recent days; then calm **lanes** (your grouped areas of work) showing today against a daily goal. Only the lane you're furthest behind on gets a quiet accent — everything else stays quiet. No decision is made for you; the point is to make *your* decision fast.
+Your day is drawn as the **work blocks you actually keep** — a hard morning, an easier afternoon, whatever shape fits you — and the bar counts down the *current* block, not some far-off end of day. A distant deadline is invisible to a time-blind brain; the end of the block you're in is not. Between blocks it pauses on a guilt-free break, and each block can be marked *hard* or *easy* so the harder work carries more weight. Below it, a streak of recent days; then calm **lanes** (your grouped areas of work) showing today against a daily goal. Only the lane you're furthest behind on gets a quiet accent — everything else stays quiet. No decision is made for you; the point is to make *your* decision fast.
 
 ### Focus — when you're working
 
 ![The Focus engine](screenshots/06-focus.png)
 
-Start a timer and everything collapses to one thing: a ring closing that lane's goal for the day, filling as you work. A shrinking "time to close the goal," how deep you are into the session, and a small gauge of the day left. Hit the goal and it says *keep rolling*, never *stop* — the aim is depth, not clocking out.
+Start a timer and everything collapses to one thing: a ring closing that lane's goal for the day, filling as you work. A shrinking "time to close the goal," how deep you are into the session, and a small gauge of the current block. Hit the goal and it says *keep rolling*, never *stop* — the aim is depth, not clocking out.
 
 ## Calm by design
 
-![The day running out](screenshots/02-idle-squeeze.png)
+![A hard block running out](screenshots/02-idle-squeeze.png)
 
-One focal point at a time, a stable layout that never rearranges, and motion you can switch off. Colour carries meaning sparingly: the single warm cue appears only when the day is genuinely running out — so it still means something when it does.
+One focal point at a time, a stable layout that never rearranges, and motion you can switch off. Colour carries meaning sparingly: the single warm cue appears only when a **hard** block is genuinely running out of time for the goal — and it stays silent through your easy blocks, where pressure would only manufacture guilt. So when it shows, it still means something.
 
 ## Every state
 
