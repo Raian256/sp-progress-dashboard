@@ -44,7 +44,7 @@ The screenshots above are the gist. The rest — goal met, day over, an unplanne
 
 ## Install
 
-Download the latest [release](https://github.com/dougcooper/sp-dashboard/releases), then in Super Productivity go to **Settings → Plugins → Load Plugin from Folder** and pick the zip.
+Download the latest [release](https://github.com/Raian256/sp-progress-dashboard/releases), then in Super Productivity go to **Settings → Plugins → Load Plugin from Folder** and pick the zip.
 
 ---
 
