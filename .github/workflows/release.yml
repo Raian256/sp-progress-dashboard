@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+# The job needs to create tags and releases.
+permissions:
+  contents: write
+
+# Serialise releases so two pushes can't publish at once; never cancel a
+# release that's mid-publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify (syntax + tests)
+        run: |
+          npm run check:syntax
+          npm test
+
+      - name: Compute version
+        id: ver
+        run: |
+          # CalVer, kept semver-valid (no leading zeros): YEAR.MONTHDAY.RUN
+          # e.g. 2026-07-06, run 42 -> 2026.706.42  ->  tag v2026.706.42
+          # The run number makes multiple same-day releases unique and ordered.
+          YEAR=$(date -u +%Y)
+          MD=$(date -u +%-m%d)
+          VERSION="${YEAR}.${MD}.${GITHUB_RUN_NUMBER}"
+          {
+            echo "version=$VERSION"
+            echo "date=$(date -u +%Y-%m-%d)"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Build plugin zip
+        run: |
+          make build VERSION="${{ steps.ver.outputs.version }}"
+          cp sp-dashboard.zip "sp-dashboard-v${{ steps.ver.outputs.version }}.zip"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.ver.outputs.version }}" \
+            "sp-dashboard-v${{ steps.ver.outputs.version }}.zip" \
+            --target "$GITHUB_SHA" \
+            --title "v${{ steps.ver.outputs.version }} (${{ steps.ver.outputs.date }})" \
+            --generate-notes
