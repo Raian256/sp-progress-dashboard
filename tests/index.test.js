@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -8,6 +8,20 @@ const html = readFileSync(resolve(__dirname, '../sp-dashboard/index.html'), 'utf
 
 describe('Date Range Reporter UI', () => {
   let scriptContent;
+
+  // Pin the clock to an active-block hour (today 10:00, inside the default
+  // Morning block) BEFORE the script runs, so the idle Today view renders the
+  // Launchpad deterministically. Without this, tests that assert on Launchpad
+  // DOM (#runway etc.) fail whenever the real wall-clock lands in a break or
+  // after the last block, since those now render the Pause / Ledger views.
+  // Only Date is faked; real timers are untouched. Rest-view tests re-pin the
+  // clock to their own hour with vi.setSystemTime.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const d = new Date(); d.setHours(10, 0, 0, 0);
+    vi.setSystemTime(d);
+  });
+  afterEach(() => { vi.useRealTimers(); });
 
   beforeEach(() => {
     // Reset the DOM
@@ -309,6 +323,72 @@ describe('Date Range Reporter UI', () => {
       expect(migrated.length).toBe(1);
       expect(migrated[0].end).toBe(22);
       expect(migrated[0].intensity).toBe('hard');
+    });
+
+    it('formatTimeShort drops zero parts', () => {
+      expect(window.formatTimeShort(45 * 60000)).toBe('45m');
+      expect(window.formatTimeShort(2 * 3600000)).toBe('2h');
+      expect(window.formatTimeShort(3600000 + 15 * 60000)).toBe('1h 15m');
+      expect(window.formatTimeShort(0)).toBe('0m');
+    });
+
+    it('previousBlock returns the most recently ended block, or null before the first', () => {
+      const blocks = twoBlocks();
+      expect(window.previousBlock(blocks, at(9))).toBe(null);    // before the first block
+      expect(window.previousBlock(blocks, at(15)).id).toBe('m'); // in the break -> morning ended
+      expect(window.previousBlock(blocks, at(21)).id).toBe('a'); // past the day -> afternoon ended
+    });
+
+    it('computeBreakProgress bounds the current break and tracks elapsed fraction', () => {
+      const blocks = twoBlocks();                 // break is 14:00 -> 16:00 (2h)
+      expect(window.computeBreakProgress(blocks, at(10))).toBe(null); // inside a block
+      expect(window.computeBreakProgress(blocks, at(21))).toBe(null); // past the last block
+      const bp = window.computeBreakProgress(blocks, at(14, 45));     // 45m into a 2h break
+      expect(bp.startH).toBe(14);
+      expect(bp.endH).toBe(16);
+      expect(Math.round(bp.totalMs / 60000)).toBe(120);
+      expect(Math.round(bp.elapsedMs / 60000)).toBe(45);
+      expect(Math.round(bp.pct)).toBe(38);
+    });
+
+    const restMetrics = () => ({
+      todayTimeSpent: 2 * 3600000, totalTimeSpent: 10 * 3600000,
+      workingDaysElapsed: 3, projectData: {}, projectTodayData: {}
+    });
+    const setupRest = () => {
+      localStorage.clear();
+      window.saveBlocks(twoBlocks());
+      window.saveGroups([{ id: 'g1', name: 'CS', weeklyGoalH: 12, dailyGoalH: 3, projectIds: ['p1'], color: '#7aa2f7' }]);
+    };
+
+    it('idle between blocks renders the On a Break view (and hides the others)', () => {
+      setupRest();
+      const d = new Date(); d.setHours(14, 45, 0, 0); vi.setSystemTime(d);
+      window.renderTodayView(restMetrics());
+      const brk = document.getElementById('td-break');
+      expect(brk.classList.contains('hidden')).toBe(false);
+      expect(document.getElementById('td-idle').classList.contains('hidden')).toBe(true);
+      expect(document.getElementById('td-done').classList.contains('hidden')).toBe(true);
+      expect(brk.textContent).toContain('On a break');
+      expect(brk.textContent).toContain('Afternoon');       // next-block preview
+      expect(brk.textContent).toContain('Morning ended');   // prev-block closure
+      expect(brk.textContent).toContain('resting');         // neutral break-progress
+      expect(brk.querySelector('.pause-arc-fill')).not.toBe(null); // the sun-arc
+    });
+
+    it('idle past the last block renders the Day Complete view (and hides the others)', () => {
+      setupRest();
+      const d = new Date(); d.setHours(21, 0, 0, 0); vi.setSystemTime(d);
+      window.renderTodayView(restMetrics());
+      const done = document.getElementById('td-done');
+      expect(done.classList.contains('hidden')).toBe(false);
+      expect(document.getElementById('td-idle').classList.contains('hidden')).toBe(true);
+      expect(document.getElementById('td-break').classList.contains('hidden')).toBe(true);
+      expect(done.textContent).toContain('Day complete');
+      expect(done.textContent).toContain('Lanes settled');
+      expect(done.textContent).toContain('Last block ended');
+      expect(done.querySelector('.ledger-spine')).not.toBe(null);   // the day spine
+      expect(done.querySelectorAll('.ds-row').length).toBe(2);       // one node per block
     });
   });
 

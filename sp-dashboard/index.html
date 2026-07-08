@@ -306,7 +306,68 @@
       --td-radius: 14px;
       font-variant-numeric: tabular-nums;
     }
-    #view-today .td-focus.hidden, #view-today .td-idle.hidden { display: none; }
+    #view-today .td-focus.hidden, #view-today .td-idle.hidden, #view-today .td-rest.hidden { display: none; }
+
+    /* ================================================================
+       The two rest modes each get their OWN visual language — distinct
+       from the Launchpad card and from each other, so the layout itself
+       tells you which moment you're in:
+       • On a Break -> "Pause": centred, airy, no card chrome; a shallow
+         sun-arc tracks across the sky as the break elapses. Whitespace
+         is the message.
+       • Day Complete -> "Ledger": a vertical spine of the day's blocks,
+         read top-to-bottom like an end-of-day review.
+       ================================================================ */
+
+    /* --- On a Break: the Pause --- */
+    .pause { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.75rem 1rem 2.5rem; }
+    .pause-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.24em; color: var(--td-muted); margin-bottom: 1.5rem; }
+    .pause-gauge { position: relative; width: min(300px, 78vw); }
+    .pause-arc { width: 100%; height: auto; display: block; overflow: visible; }
+    .pause-arc-track { fill: none; stroke: var(--td-track); stroke-width: 5; stroke-linecap: round; }
+    .pause-arc-fill { fill: none; stroke: var(--td-soft); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 0.9s ease; }
+    /* Cradled inside the dome's arch (its mouth sits just below vertical centre). */
+    .pause-center { position: absolute; left: 0; right: 0; top: 55%; transform: translateY(-46%); }
+    .pause-num { font-size: 3rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--td-ink); }
+    .pause-until { font-size: 0.95rem; color: var(--td-muted); margin-top: 0.5rem; }
+    .pause-until b { color: var(--td-ink); font-weight: 600; }
+    .pause-rest { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--td-muted); margin-top: 1.3rem; }
+    .pause-foot { font-size: 0.82rem; color: var(--td-muted); margin-top: 0.55rem; }
+    .pause-foot b { color: var(--td-ink); font-weight: 600; }
+
+    /* --- Day Complete: the Ledger --- */
+    .ledger { padding: 0.5rem 0.15rem 0.5rem; }
+    .ledger-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--td-muted); }
+    .ledger-total { display: flex; align-items: baseline; gap: 0.6rem; margin-top: 0.55rem; flex-wrap: wrap; }
+    .ledger-num { font-size: 2.7rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: var(--td-ink); }
+    .ledger-goal { font-size: 0.95rem; color: var(--td-muted); }
+    .ledger-met { color: var(--td-go); }
+    /* The signature: the day as a vertical spine of its blocks. */
+    .ledger-spine { list-style: none; margin: 1.7rem 0 0; padding: 0; position: relative; }
+    .ledger-spine::before { content: ''; position: absolute; left: 5px; top: 0.6rem; bottom: 0.6rem; width: 2px; background: var(--td-line); border-radius: 2px; }
+    .ds-row { position: relative; display: flex; align-items: baseline; gap: 0.7rem; padding: 0.45rem 0 0.45rem 1.5rem; }
+    .ds-node { position: absolute; left: 0; top: 0.45rem; width: 12px; height: 12px; border-radius: 50%; background: var(--td-track); box-shadow: 0 0 0 3px var(--td-surface); }
+    .ds-hard .ds-node { background: var(--td-go); }
+    .ds-soft .ds-node { background: var(--td-soft); }
+    .ds-label { font-weight: 600; font-size: 0.98rem; color: var(--td-ink); }
+    .ds-window { margin-left: auto; font-size: 0.85rem; color: var(--td-muted); font-variant-numeric: tabular-nums; }
+    .ds-break { position: relative; padding: 0.1rem 0 0.1rem 1.5rem; }
+    .ds-break-label { font-size: 0.7rem; color: var(--td-muted); opacity: 0.7; letter-spacing: 0.02em; }
+    .ledger-endline { font-size: 0.8rem; color: var(--td-muted); margin-top: 0.9rem; padding-left: 1.5rem; }
+    .ledger-sec { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--td-muted); font-weight: 700; margin: 1.9rem 0 0.95rem; }
+    .ledger-lanes { display: flex; flex-direction: column; gap: 0.6rem; }
+    .ll-row { display: flex; align-items: center; gap: 0.75rem; }
+    .ll-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--lane-color, var(--td-muted)); flex: 0 0 auto; }
+    .ll-name { font-size: 0.92rem; font-weight: 500; color: var(--td-ink); }
+    .ll-bar { margin-left: auto; flex: 0 0 auto; width: min(160px, 34vw); height: 6px; border-radius: 4px; background: var(--td-track); overflow: hidden; }
+    .ll-fill { display: block; height: 100%; border-radius: 4px; background: var(--td-soft-fill); }
+    .ll-fill.met { background: var(--td-go); }
+    .ll-val { flex: 0 0 auto; width: 7rem; text-align: right; font-size: 0.82rem; color: var(--td-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ll-val b { color: var(--td-ink); font-weight: 600; }
+    .ll-check { color: var(--td-go); margin-left: 0.1rem; }
+    .ledger-streak { margin-top: 1.9rem; display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
+    .ledger-week { margin-top: 1.4rem; font-size: 0.84rem; color: var(--td-muted); }
+    .ledger-week b { color: var(--td-ink); font-weight: 700; }
 
     /* --- Day runway (idle hero) --- */
     .runway { background: var(--td-surface); border: 1px solid var(--td-line); border-radius: var(--td-radius); padding: 1.25rem 1.35rem; }
@@ -444,6 +505,12 @@
           </div>
           <div id="lanes-list" class="lanes-list"></div>
         </section>
+
+        <!-- REST mode: between blocks, a next block still to come (the break). -->
+        <section id="td-break" class="td-rest hidden" aria-live="polite"></section>
+
+        <!-- REST mode: past the last block — the day's scaffolding is done. -->
+        <section id="td-done" class="td-rest hidden" aria-live="polite"></section>
       </div>
 
       <!-- ========================================== -->
@@ -730,6 +797,12 @@
       const lastEnd = getLastBlockEndHour();
       if (lastEnd === null) { banner.classList.remove('visible'); return; }
 
+      // The idle Day-Complete view already carries the wind-down signal, so don't
+      // double up. The banner is reserved for tracking past the last block (Focus).
+      if (!trackingCurrent && computeRunway(new Date(), loadBlocks(), 0, 0).state === 'done') {
+        banner.classList.remove('visible'); return;
+      }
+
       const now = new Date();
       const currentHour = now.getHours();
       const targetHour = Math.floor(lastEnd);
@@ -899,6 +972,15 @@
     const escHtml = (s) => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const formatGoalH = (h) => (Number.isInteger(h) ? h + 'h' : h.toFixed(1) + 'h');
+    // Compact duration that drops zero parts: 45m -> "45m", 2h -> "2h", 1h15m ->
+    // "1h 15m". Used by the calmer rest views where "0h 45m" reads as clutter.
+    const formatTimeShort = (ms) => {
+      const totalMin = Math.round((ms || 0) / 60000);
+      const h = Math.floor(totalMin / 60), m = totalMin % 60;
+      if (h && m) return `${h}h ${m}m`;
+      if (h) return `${h}h`;
+      return `${m}m`;
+    };
     // Fractional hour (e.g. 14.5) -> "2:30 PM"; whole hours drop the minutes.
     const formatHour = (h) => {
       const whole = Math.floor(h), mins = Math.round((h - whole) * 60);
@@ -977,23 +1059,24 @@
       return { mode: 'focus', groupId: pick.id, isUngrouped: false };
     };
 
-    // Top-level entry: pick Idle or Focus and render it.
+    // Top-level entry: pick Idle or Focus and render it. Focus (tracking) always
+    // wins; the idle path then chooses among its own sub-views by block state.
+    const IDLE_SECTIONS = ['td-idle', 'td-break', 'td-done'];
     const renderTodayView = (metrics) => {
       lastPullWall = Date.now();
-      const idleEl = document.getElementById('td-idle');
       const focusEl = document.getElementById('td-focus');
-      if (!idleEl || !focusEl) return;
+      const idleEls = IDLE_SECTIONS.map(id => document.getElementById(id));
+      if (!idleEls[0] || !focusEl) return;
       const stats = computeGroupStats(metrics);
       const res = resolveTrackingMode(trackingCurrent, loadGroups(), stats);
       if (res.mode === 'focus') {
-        idleEl.classList.add('hidden');
+        idleEls.forEach(el => el && el.classList.add('hidden'));
         focusEl.classList.remove('hidden');
         renderFocus(metrics, stats, res);
         startFocusTimer();
       } else {
         stopFocusTimer();
         focusEl.classList.add('hidden');
-        idleEl.classList.remove('hidden');
         renderIdle(metrics, stats);
       }
     };
@@ -1001,11 +1084,182 @@
     // Called by the message handler the instant tracking state changes.
     const applyTrackingMode = () => { if (latestMetrics) renderTodayView(latestMetrics); };
 
-    // --- IDLE: Launchpad ---
+    // --- IDLE: three sub-views, chosen by where "now" sits among the blocks.
+    // In a block -> Launchpad; on a break with a next block -> On a Break;
+    // past the last block -> Day Complete. No blocks configured falls back to
+    // the Launchpad. Each sub-view owns its own section so the layout is stable.
     const renderIdle = (metrics, stats) => {
+      const now = new Date();
+      const blocks = loadBlocks();
+      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
+      const todayMs = metrics.todayTimeSpent || 0;
+      const res = computeRunway(now, blocks, dailyGoalMs, todayMs);
+      const state = blocks.length ? res.state : 'active';   // no blocks -> Launchpad
+      const show = (id) => { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
+      const hideOthers = (keep) => IDLE_SECTIONS.filter(id => id !== keep)
+        .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+      if (state === 'upcoming') {
+        hideOthers('td-break'); show('td-break');
+        renderOnBreak(metrics, res, now, blocks);
+      } else if (state === 'done') {
+        hideOthers('td-done'); show('td-done');
+        renderDayComplete(metrics, stats, now, blocks);
+      } else {
+        hideOthers('td-idle'); show('td-idle');
+        renderLaunchpad(metrics, stats);
+      }
+    };
+
+    // --- IDLE / active block: the Launchpad ---
+    const renderLaunchpad = (metrics, stats) => {
       renderRunway(metrics);
       renderLanes(metrics, stats);
       renderMomentum(metrics);
+    };
+
+    // Pure: the block that most recently ended before now (largest end <= nowH),
+    // or null when nothing has ended yet (before the day's first block). Testable.
+    const previousBlock = (blocks, now) => {
+      const nowH = hourOf(now);
+      let best = null;
+      for (const b of (blocks || [])) { if (b.end <= nowH && (!best || b.end > best.end)) best = b; }
+      return best;
+    };
+    const intensityWord = (b) => (b && b.intensity === 'soft') ? 'soft block' : 'hard block';
+
+    // Pure: the current break as a bounded window from the block that just ended
+    // to the next block's start, with how much has elapsed. null when there's no
+    // bounded break (before the first block, inside a block, or after the last).
+    // The fill is neutral/calm by intent — it marks rest passing, not a deadline.
+    const computeBreakProgress = (blocks, now) => {
+      const nowH = hourOf(now);
+      const prev = previousBlock(blocks, now);
+      const next = (blocks || []).slice().sort((a, b) => a.start - b.start).find(b => b.start > nowH) || null;
+      if (!prev || !next || next.start <= prev.end) return null;
+      const startH = prev.end, endH = next.start;
+      const totalMs = (endH - startH) * 3600000;
+      const elapsedMs = Math.min(Math.max(0, (nowH - startH) * 3600000), totalMs);
+      return { startH, endH, elapsedMs, totalMs, pct: totalMs > 0 ? (elapsedMs / totalMs) * 100 : 0 };
+    };
+
+    // --- IDLE / between blocks: On a Break. Calm, one focal point (time to the
+    // next block as breathing room), honest data only — no still-open lanes, no
+    // squeeze, no draining countdown. Recaps at the granularity we actually have.
+    // The sun-arc is a 180° dome; its path length sets the dash geometry.
+    const PAUSE_ARC_LEN = Math.PI * 104;   // r=104 in the arc viewBox
+    const renderOnBreak = (metrics, res, now, blocks) => {
+      const el = document.getElementById('td-break');
+      if (!el) return;
+      const nb = res.nextBlock;
+      const todayMs = metrics.todayTimeSpent || 0;
+      const prev = previousBlock(blocks, now);
+      const bp = computeBreakProgress(blocks, now);
+      // The arc fills left->right across the sky as the break elapses; empty before
+      // the day's first block (no bounded break yet).
+      const pct = bp ? bp.pct / 100 : 0;
+      const dashOffset = (PAUSE_ARC_LEN * (1 - pct)).toFixed(1);
+      const arcPath = 'M16,120 A104,104 0 0 1 224,120';   // dome (∩), fills left→right
+      const restCap = bp
+        ? `resting &middot; ${formatTimeShort(bp.elapsedMs)} of ${formatTimeShort(bp.totalMs)}`
+        : `${intensityWord(nb)} up next`;
+      const footLead = prev
+        ? `${escHtml(prev.label)} ended ${formatHour(prev.end)}`
+        : `starts ${formatHour(nb.start)}`;
+      el.className = 'td-rest';
+      el.innerHTML = `
+        <div class="pause">
+          <div class="pause-eyebrow">${prev ? 'On a break' : 'Day ahead'}</div>
+          <div class="pause-gauge">
+            <svg class="pause-arc" viewBox="0 0 240 128" aria-hidden="true">
+              <path class="pause-arc-track" d="${arcPath}"></path>
+              <path class="pause-arc-fill" d="${arcPath}" style="stroke-dasharray:${PAUSE_ARC_LEN.toFixed(1)};stroke-dashoffset:${dashOffset}"></path>
+            </svg>
+            <div class="pause-center">
+              <div class="pause-num">${formatTimeShort(res.leftMs)}</div>
+              <div class="pause-until">until <b>${escHtml(nb.label)}</b></div>
+            </div>
+          </div>
+          <div class="pause-rest">${restCap}</div>
+          <div class="pause-foot">${footLead} &middot; <b>${formatTimeShort(todayMs)}</b> today</div>
+        </div>`;
+    };
+
+    // --- IDLE / past the last block: Day Complete. A strictly neutral instrument
+    // (no praise, no "rest well"): today's total as a record, each lane's final
+    // standing, the streak as a fact, and the week as the now-live horizon. It
+    // absorbs the wind-down signal, so renderWindDownBanner suppresses itself here.
+    // The day drawn as a vertical spine: one node per block (label + window),
+    // breaks shown as faint gaps between them. Reads top-to-bottom as the day's
+    // completed shape. Windows are the schedule, not per-block work (unavailable).
+    const renderDaySpine = (blocks) => {
+      const list = (blocks || []).slice().sort((a, b) => a.start - b.start);
+      if (!list.length) return '';
+      let rows = '';
+      list.forEach((b, i) => {
+        rows += `<li class="ds-row ds-${b.intensity}">
+            <span class="ds-node"></span>
+            <span class="ds-label">${escHtml(b.label)}</span>
+            <span class="ds-window">${formatHour(b.start)} – ${formatHour(b.end)}</span>
+          </li>`;
+        const nx = list[i + 1];
+        if (nx && nx.start > b.end) {
+          rows += `<li class="ds-break"><span class="ds-break-label">break &middot; ${formatTimeShort((nx.start - b.end) * 3600000)}</span></li>`;
+        }
+      });
+      return `<ol class="ledger-spine">${rows}</ol>`;
+    };
+
+    const renderDayComplete = (metrics, stats, now, blocks) => {
+      const el = document.getElementById('td-done');
+      if (!el) return;
+      const todayMs = metrics.todayTimeSpent || 0;
+      const weekMs = metrics.totalTimeSpent || 0;
+      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
+      const weeklyGoalMs = getTotalWeeklyGoalH() * 3600000;
+      const lastEnd = blocks.length ? blocks[blocks.length - 1].end : null;
+      const workingDays = metrics.workingDaysElapsed || 0;
+
+      let goalHtml;
+      if (dailyGoalMs <= 0) goalHtml = 'logged today';
+      else if (todayMs >= dailyGoalMs) goalHtml = `/ ${formatGoalH(dailyGoalMs / 3600000)} <span class="ledger-met">&middot; met</span>`;
+      else goalHtml = `/ ${formatGoalH(dailyGoalMs / 3600000)}`;
+
+      const ordered = orderLanes(stats);
+      const lanesHtml = ordered.length ? ordered.map(s => {
+        const hasGoal = s.dailyGoalMs > 0;
+        const pct = hasGoal ? Math.min((s.todayMs / s.dailyGoalMs) * 100, 100) : 0;
+        const met = hasGoal && s.todayMs >= s.dailyGoalMs;
+        const val = hasGoal
+          ? `<b>${formatTimeShort(s.todayMs)}</b> / ${formatGoalH(s.dailyGoalMs / 3600000)}`
+          : `<b>${formatTimeShort(s.todayMs)}</b>`;
+        return `<div class="ll-row" style="--lane-color:${s.color}">
+            <span class="ll-dot"></span>
+            <span class="ll-name">${escHtml(s.name)}</span>
+            <span class="ll-bar"><span class="ll-fill ${met ? 'met' : ''}" style="width:${pct}%"></span></span>
+            <span class="ll-val">${val}${met ? ' <span class="ll-check">&#10003;</span>' : ''}</span>
+          </div>`;
+      }).join('') : '<div class="lane-empty">No lanes yet. Use Manage Groups to create one.</div>';
+
+      const mom = computeMomentum(metrics);
+      const weekLine = `<b>${formatTime(weekMs)}</b> this week`
+        + (weeklyGoalMs > 0 ? ` / ${formatGoalH(weeklyGoalMs / 3600000)}` : '')
+        + (workingDays > 0 ? ` &middot; ${workingDays} working day${workingDays !== 1 ? 's' : ''} in` : '');
+
+      el.className = 'td-rest';
+      el.innerHTML = `
+        <div class="ledger">
+          <div class="ledger-eyebrow">Day complete</div>
+          <div class="ledger-total">
+            <span class="ledger-num">${formatTimeShort(todayMs)}</span>
+            <span class="ledger-goal">${goalHtml}</span>
+          </div>
+          ${renderDaySpine(blocks)}
+          ${lastEnd !== null ? `<div class="ledger-endline">Last block ended ${formatHour(lastEnd)}</div>` : ''}
+          <div class="ledger-sec">Lanes settled</div>
+          <div class="ledger-lanes">${lanesHtml}</div>
+          <div class="ledger-streak"><div class="momentum-cells">${mom.cellsHtml}</div><div class="momentum-label">${mom.label}</div></div>
+          <div class="ledger-week">${weekLine}</div>
+        </div>`;
     };
 
     const renderRunway = (metrics) => {
@@ -1075,48 +1329,56 @@
         <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(todayMs)} today &middot; ${formatTime(weekMs)} this week</div>`;
     };
 
+    // Lane ordering (most behind first, ungrouped last) + a single lane row's
+    // markup, factored out so Day Complete renders identical lanes without the
+    // "slipping" highlight (slippingId=null keeps it neutral).
+    const orderLanes = (stats) => {
+      const gap = (s) => (s.dailyGoalMs > 0 ? s.dailyGoalMs - s.todayMs : -Infinity);
+      const sorted = stats.filter(s => !s.isUngrouped).slice().sort((a, b) => gap(b) - gap(a));
+      return sorted.concat(stats.filter(s => s.isUngrouped));
+    };
+    const laneRowHtml = (s, slippingId) => {
+      const hasGoal = s.dailyGoalMs > 0;
+      const pct = hasGoal ? Math.min((s.todayMs / s.dailyGoalMs) * 100, 100) : 0;
+      const filled = hasGoal && s.todayMs >= s.dailyGoalMs;
+      const valHtml = hasGoal
+        ? `<b>${formatTime(s.todayMs)}</b> / ${formatGoalH(s.dailyGoalMs / 3600000)}`
+        : `<b>${formatTime(s.todayMs)}</b> today`;
+      const sub = s.weeklyGoalMs > 0
+        ? `This week ${formatTime(s.weeklyMs)} / ${formatGoalH(s.weeklyGoalMs / 3600000)}`
+        : (s.isUngrouped ? '' : 'No weekly goal');
+      return `<div class="lane ${s.id === slippingId ? 'slipping' : ''}" style="--lane-color:${s.color}">
+          <div class="lane-head">
+            <span class="lane-dot"></span>
+            <span class="lane-name">${escHtml(s.name)}</span>
+            <span class="lane-val">${valHtml}</span>
+          </div>
+          <div class="lane-track"><div class="lane-fill ${filled ? 'filled' : ''}" style="width:${pct}%"></div></div>
+          ${sub ? `<div class="lane-sub">${sub}</div>` : ''}
+        </div>`;
+    };
+
     const renderLanes = (metrics, stats) => {
       const el = document.getElementById('lanes-list');
       if (!el) return;
-      const real = stats.filter(s => !s.isUngrouped);
-      const gap = (s) => (s.dailyGoalMs > 0 ? s.dailyGoalMs - s.todayMs : -Infinity);
-      const sorted = real.slice().sort((a, b) => gap(b) - gap(a));
-      const ordered = sorted.concat(stats.filter(s => s.isUngrouped));
+      const ordered = orderLanes(stats);
       if (ordered.length === 0) {
         el.innerHTML = '<div class="lane-empty">No lanes yet. Use Manage Groups to create one and set a daily goal.</div>';
         return;
       }
-      const slipping = sorted.find(s => s.dailyGoalMs > 0 && s.todayMs < s.dailyGoalMs);
+      const slipping = ordered.find(s => !s.isUngrouped && s.dailyGoalMs > 0 && s.todayMs < s.dailyGoalMs);
       const slippingId = slipping ? slipping.id : null;
-      el.innerHTML = ordered.map(s => {
-        const hasGoal = s.dailyGoalMs > 0;
-        const pct = hasGoal ? Math.min((s.todayMs / s.dailyGoalMs) * 100, 100) : 0;
-        const filled = hasGoal && s.todayMs >= s.dailyGoalMs;
-        const valHtml = hasGoal
-          ? `<b>${formatTime(s.todayMs)}</b> / ${formatGoalH(s.dailyGoalMs / 3600000)}`
-          : `<b>${formatTime(s.todayMs)}</b> today`;
-        const sub = s.weeklyGoalMs > 0
-          ? `This week ${formatTime(s.weeklyMs)} / ${formatGoalH(s.weeklyGoalMs / 3600000)}`
-          : (s.isUngrouped ? '' : 'No weekly goal');
-        return `<div class="lane ${s.id === slippingId ? 'slipping' : ''}" style="--lane-color:${s.color}">
-            <div class="lane-head">
-              <span class="lane-dot"></span>
-              <span class="lane-name">${escHtml(s.name)}</span>
-              <span class="lane-val">${valHtml}</span>
-            </div>
-            <div class="lane-track"><div class="lane-fill ${filled ? 'filled' : ''}" style="width:${pct}%"></div></div>
-            ${sub ? `<div class="lane-sub">${sub}</div>` : ''}
-          </div>`;
-      }).join('');
+      el.innerHTML = ordered.map(s => laneRowHtml(s, slippingId)).join('');
     };
 
-    const renderMomentum = (metrics) => {
-      const el = document.getElementById('momentum');
-      if (!el) return;
+    // The 14-day momentum grid + streak, computed once so both the Launchpad and
+    // Day Complete render the same strip. A day "counts" at 1/3 the daily goal
+    // (or 30m if no goal); today's miss doesn't break the streak (it's unfinished).
+    const computeMomentum = (metrics) => {
       const dayTotals = {};
       cachedTasks.forEach(t => { for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms; });
       const dailyGoalMs = getTotalDailyGoalH() * 3600000;
-      const floorMs = dailyGoalMs > 0 ? dailyGoalMs / 3 : 30 * 60000; // a day "counts" at 1/3 goal, or 30m
+      const floorMs = dailyGoalMs > 0 ? dailyGoalMs / 3 : 30 * 60000;
       const today = new Date();
       const N = 14;
       const cells = [];
@@ -1141,7 +1403,14 @@
       const label = streak > 0
         ? `<b>${streak}</b>-day streak${todayHit ? '' : ' &middot; today not logged yet'}`
         : `No streak yet &middot; a day counts at ${formatTime(floorMs)}`;
-      el.innerHTML = `<div class="momentum-cells">${cellsHtml}</div><div class="momentum-label">${label}</div>`;
+      return { cellsHtml, label, streak, todayHit, floorMs };
+    };
+
+    const renderMomentum = (metrics) => {
+      const el = document.getElementById('momentum');
+      if (!el) return;
+      const m = computeMomentum(metrics);
+      el.innerHTML = `<div class="momentum-cells">${m.cellsHtml}</div><div class="momentum-label">${m.label}</div>`;
     };
 
     // --- FOCUS: Engine ---
@@ -2351,6 +2620,12 @@
     window.resolveTrackingMode = resolveTrackingMode;
     window.computeRunway = computeRunway;
     window.blockAtTime = blockAtTime;
+    window.previousBlock = previousBlock;
+    window.computeBreakProgress = computeBreakProgress;
+    window.formatTimeShort = formatTimeShort;
+    window.renderDaySpine = renderDaySpine;
+    window.orderLanes = orderLanes;
+    window.computeMomentum = computeMomentum;
     window.loadBlocks = loadBlocks;
     window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
