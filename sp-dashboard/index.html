@@ -274,6 +274,18 @@
     .modal-select { background: var(--bg, #121212); color: var(--text-color, #fff); border: 1px solid var(--divider-color, #333); border-radius: 0.25rem; padding: 0.3rem 0.5rem; font-size: 0.8rem; flex: 0 0 auto; width: 10rem; max-width: 45%; }
     .btn-primary { background: var(--c-primary, #03a9f4); color: #fff; border: none; border-radius: var(--card-border-radius, 8px); padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; margin-top: 0.5rem; }
 
+    /* --- DIAGNOSTICS (Settings view) --- */
+    .diag-results { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; }
+    .diag-row { display: flex; align-items: baseline; gap: 0.6rem; font-size: 0.82rem; line-height: 1.4; }
+    .diag-icon { flex: 0 0 auto; width: 1.05rem; text-align: center; font-weight: 700; }
+    .diag-ok .diag-icon { color: #4caf50; }
+    .diag-warn .diag-icon { color: #e0af68; }
+    .diag-fail .diag-icon { color: #f87171; }
+    .diag-body { min-width: 0; }
+    .diag-label { font-weight: 600; color: var(--text-color, #fff); }
+    .diag-detail { color: var(--text-color-muted, #9e9e9e); }
+    .diag-time { font-size: 0.72rem; color: var(--text-color-muted, #9e9e9e); margin-top: 0.5rem; }
+
     /* ====================================================================== */
     /* TODAY VIEW — AuDHD-tuned: calm, low-noise, one focal point per mode.    */
     /* Near-zero red (threat/shame; ADHD habituates). Amber only for a real    */
@@ -555,6 +567,13 @@
           <button class="btn-primary" id="add-group-btn">+ New group</button>
           <div class="modal-section-title">Project assignment</div>
           <div id="assign-list"></div>
+        </div>
+
+        <div class="project-hours-section">
+          <h3 class="section-title">Diagnostics</h3>
+          <div class="modal-section-title">Check the plugin's connection to Super Productivity</div>
+          <button class="btn-primary" id="run-diag-btn">Run diagnostics</button>
+          <div id="diag-results" class="diag-results"></div>
         </div>
       </div>
 
@@ -875,6 +894,7 @@
     let focusState = null;         // { baseTodayMs, goalMs, groupName, color }
     let lastPullWall = Date.now(); // last data pull, for live extrapolation
     let prevTodayByTaskId = null;  // for the delta fallback
+    let lastHostMessageAt = 0;     // wall-clock of the last postMessage from plugin.js (0 = never)
 
     const escHtml = (s) => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1458,6 +1478,151 @@
       renderBlocksSettings();
       if (latestMetrics) { renderTodayView(latestMetrics); renderWindDownBanner(); }
     });
+
+    // --- DIAGNOSTICS (Settings view) ---------------------------------------
+    // A self-check the user can run to see the plugin's link to Super
+    // Productivity: host connection, each data permission the manifest asks for,
+    // the plugin.js live-update bridge, and — the useful one — whether tracking
+    // is coming from the authoritative CURRENT_TASK_CHANGE hook or the
+    // time-delta fallback. Returns a plain array so it stays easy to test.
+    const diagAgo = (ms) => {
+      if (!ms) return 'never';
+      const s = Math.round((Date.now() - ms) / 1000);
+      if (s < 2) return 'just now';
+      if (s < 60) return s + 's ago';
+      return Math.round(s / 60) + 'min ago';
+    };
+
+    // Actively ping plugin.js and wait (briefly) for its reply. A pong proves the
+    // companion host script is loaded and tells us which hooks it registered —
+    // so an idle-but-healthy setup reads green instead of a misleading "silent".
+    const pingHost = (timeoutMs = 700) => new Promise((resolve) => {
+      let settled = false;
+      const onMsg = (e) => {
+        if (e.data && e.data.type === 'SP_PONG') {
+          settled = true; window.removeEventListener('message', onMsg); resolve(e.data);
+        }
+      };
+      window.addEventListener('message', onMsg);
+      try { window.parent.postMessage({ type: 'SP_PING' }, '*'); } catch (err) {}
+      setTimeout(() => { if (!settled) { window.removeEventListener('message', onMsg); resolve(null); } }, timeoutMs);
+    });
+
+    const runDiagnostics = async () => {
+      const rows = [];
+      const ok   = (label, detail) => rows.push({ status: 'ok',   label, detail });
+      const warn = (label, detail) => rows.push({ status: 'warn', label, detail });
+      const fail = (label, detail) => rows.push({ status: 'fail', label, detail });
+
+      // 1. Host connection. Without it every later check is moot.
+      if (!window.PluginAPI) {
+        fail('Host connection', 'Super Productivity not detected — the dashboard is showing mock data (standalone/dev mode). The checks below only apply inside the app.');
+        return rows;
+      }
+      ok('Host connection', 'Connected to Super Productivity.');
+
+      // 2. Data permissions — actually exercise each API the manifest requests.
+      const perm = async (name, fn) => {
+        if (typeof fn !== 'function') { fail(name + ' permission', 'Method missing on PluginAPI — the host may be older than the required version.'); return; }
+        try {
+          const res = await fn();
+          const n = Array.isArray(res) ? res.length : 0;
+          ok(name + ' permission', 'Granted — returned ' + n + ' ' + (n === 1 ? 'item' : 'items') + '.');
+        } catch (e) {
+          fail(name + ' permission', 'Call failed: ' + ((e && e.message) || e) + '. Check the plugin’s granted permissions in Super Productivity.');
+        }
+      };
+      const api = window.PluginAPI;
+      await perm('getTasks',         api.getTasks && api.getTasks.bind(api));
+      await perm('getArchivedTasks', api.getArchivedTasks && api.getArchivedTasks.bind(api));
+      await perm('getAllProjects',   api.getAllProjects && api.getAllProjects.bind(api));
+
+      // Ping the companion script so the next two checks reflect reality rather
+      // than "we haven't happened to hear from it yet".
+      const pong = await pingHost();
+
+      // 3. Live-update bridge (plugin.js → iframe postMessage).
+      if (pong) {
+        if (pong.actionHookRegistered) {
+          ok('Live updates', 'Companion script responding and the action hook is registered — the view refreshes on changes' + (lastHostMessageAt ? ' (last push ' + diagAgo(lastHostMessageAt) + ').' : '.'));
+        } else {
+          warn('Live updates', 'Companion script responds, but the “action” hook is not registered — add "action" to the manifest "hooks" array. Falling back to the 60s refresh.');
+        }
+      } else if (lastHostMessageAt) {
+        ok('Live updates', 'Bridge active — last signal from the host ' + diagAgo(lastHostMessageAt) + '.');
+      } else {
+        warn('Live updates', 'No reply from the companion script (plugin.js). It may not be loaded — the view will only refresh on the 60s timer.');
+      }
+
+      // 4. Tracking source — the hook, or the fallback? (the point of this tool)
+      if (pong && pong.currentTaskHookRegistered) {
+        ok('Tracking detection', 'CURRENT_TASK_CHANGE hook registered — authoritative live switching' + (trackingViaHook ? ' (confirmed firing).' : '. Start or stop a timer to see it switch.'));
+      } else if (trackingViaHook) {
+        ok('Tracking detection', 'CURRENT_TASK_CHANGE hook is firing — authoritative live switching.');
+      } else if (pong && pong.currentTaskHookAvailable === false) {
+        warn('Tracking detection', 'This host build lacks the CURRENT_TASK_CHANGE hook — using the time-delta fallback. Update Super Productivity for instant switching.');
+      } else if (pong) {
+        warn('Tracking detection', 'Tracking hook not registered — check the manifest “hooks” declaration. Using the time-delta fallback for now.');
+      } else {
+        warn('Tracking detection', 'Could not reach the companion script to confirm the tracking hook — using the time-delta fallback.');
+      }
+
+      // 5. Current tracking state (informational, never an error).
+      if (trackingCurrent) {
+        const sess = focusSessionStart ? ' — session ' + formatTime(Date.now() - focusSessionStart) : '';
+        ok('Current state', 'Tracking “' + (trackingCurrent.title || 'Untitled task') + '”' + sess + ' (Focus mode).');
+      } else {
+        ok('Current state', 'Not tracking right now (Idle mode).');
+      }
+
+      // 6. Settings storage — the plugin persists all config in localStorage.
+      try {
+        const k = 'sp-dashboard-diag-probe';
+        localStorage.setItem(k, '1');
+        const readBack = localStorage.getItem(k) === '1';
+        localStorage.removeItem(k);
+        if (readBack) ok('Settings storage', 'localStorage is writable — preferences and groups will persist.');
+        else fail('Settings storage', 'localStorage did not read back — settings may not persist across reloads.');
+      } catch (e) {
+        fail('Settings storage', 'localStorage unavailable: ' + ((e && e.message) || e) + '. Settings will reset on reload.');
+      }
+
+      // 7. Configuration — groups and work blocks drive goals and the runway.
+      const groups = loadGroups();
+      const blocks = loadBlocks();
+      const dailyGoalH = getTotalDailyGoalH();
+      if (!groups.length) {
+        warn('Configuration', 'No groups yet — goals and lanes stay empty until you add one above.');
+      } else if (dailyGoalH <= 0) {
+        warn('Configuration', groups.length + ' group(s), but no daily goal set — the Today runway needs a daily goal.');
+      } else {
+        ok('Configuration', groups.length + ' group(s), ' + blocks.length + ' work block(s), ' + dailyGoalH + 'h daily goal.');
+      }
+
+      return rows;
+    };
+
+    const renderDiagnostics = async () => {
+      const box = document.getElementById('diag-results');
+      const btn = document.getElementById('run-diag-btn');
+      if (!box) return;
+      box.innerHTML = '<div class="diag-detail">Running…</div>';
+      if (btn) btn.disabled = true;
+      let rows;
+      try { rows = await runDiagnostics(); }
+      catch (e) { rows = [{ status: 'fail', label: 'Diagnostics', detail: 'Unexpected error: ' + ((e && e.message) || e) }]; }
+      if (btn) btn.disabled = false;
+      const icon = { ok: '✓', warn: '!', fail: '✗' };
+      box.innerHTML = rows.map(r =>
+        '<div class="diag-row diag-' + r.status + '">' +
+          '<span class="diag-icon">' + (icon[r.status] || '') + '</span>' +
+          '<span class="diag-body"><span class="diag-label">' + escHtml(r.label) + '</span> ' +
+          '<span class="diag-detail">' + escHtml(r.detail) + '</span></span>' +
+        '</div>'
+      ).join('') + '<div class="diag-time">Last run ' + new Date().toLocaleTimeString() + '</div>';
+    };
+
+    document.getElementById('run-diag-btn').addEventListener('click', renderDiagnostics);
 
     // --- RETROSPECTIVE view: "This Week in Review" summary (always rendered) ---
     const renderWeekInReview = (metrics) => {
@@ -2189,6 +2354,7 @@
     window.loadBlocks = loadBlocks;
     window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
+    window.runDiagnostics = runDiagnostics;
 
     // --- SP INTEGRATION / NATIVE IFRAME COMMS ---
     const pullDataFromSP = async () => {
@@ -2244,6 +2410,9 @@
     window.addEventListener('message', (event) => {
       console.log("[sp-dashboard] message event received in iframe");
       console.log(event.data)
+      if (event.data && (event.data.type === 'SP_STATE_CHANGED' || event.data.type === 'SP_TRACKING_CHANGED')) {
+        lastHostMessageAt = Date.now();   // proves the plugin.js bridge is live
+      }
       if (event.data && event.data.type === 'SP_STATE_CHANGED') {
         pullDataFromSP();
       } else if (event.data && event.data.type === 'SP_TRACKING_CHANGED') {
@@ -2272,6 +2441,11 @@
     setTimeout(() => {
       console.log("[sp-dashboard] bootstrap timeout fired; PluginAPI exists?", !!window.PluginAPI);
       if (window.PluginAPI) {
+        // We may have been opened while a task was already being tracked, in
+        // which case plugin.js already fired CURRENT_TASK_CHANGE before this
+        // iframe existed. Ask it for the current tracking state so we start in
+        // Focus mode instead of Idle; it replies via SP_TRACKING_CHANGED.
+        try { window.parent.postMessage({ type: 'SP_REQUEST_TRACKING' }, '*'); } catch (e) {}
         pullDataFromSP();
       } else {
         console.log("[sp-dashboard] No PluginAPI detected. Loading mock data...");

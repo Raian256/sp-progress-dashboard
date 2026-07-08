@@ -9,6 +9,10 @@
   "icon": "icon.svg",
   "iFrame": true,
   "sidePanel": false,
+  "hooks": [
+    "action",
+    "currentTaskChange"
+  ],
   "permissions": [
     "getTasks",
     "getArchivedTasks",
