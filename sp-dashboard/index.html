@@ -335,6 +335,22 @@
     .pause-foot { font-size: 0.82rem; color: var(--td-muted); margin-top: 0.55rem; }
     .pause-foot b { color: var(--td-ink); font-weight: 600; }
 
+    /* --- Cold Start: idle at 0m, day not yet begun. Quiet + open. --- */
+    .cold { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2.25rem 1rem 2.75rem; }
+    .cold-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.24em; color: var(--td-muted); margin-bottom: 1.6rem; }
+    .cold-hero { font-size: 1.9rem; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; color: var(--td-muted); max-width: 22rem; }
+    .cold-hero b { color: var(--td-ink); font-weight: 600; }
+    .cold-horizon { position: relative; width: min(320px, 82vw); height: 10px; margin: 2rem 0 0.55rem; }
+    .ch-seg { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--td-track); }
+    .ch-seg.current { background: transparent; box-shadow: inset 0 0 0 1.5px var(--block-accent, var(--td-go)); }
+    .ch-now { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 2px; background: var(--td-ink); opacity: 0.45; }
+    .cold-rail { display: flex; justify-content: space-between; width: min(320px, 82vw); font-size: 0.68rem; color: var(--td-muted); }
+    .cold-rail .ch-rail-mid { color: var(--block-accent, var(--td-muted)); }
+    .cold-begin { font-size: 0.9rem; line-height: 1.5; color: var(--td-muted); max-width: 20rem; margin-top: 1.9rem; }
+    .cold-lanes { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 0.9rem; margin-top: 1.7rem; }
+    .cold-chip { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--td-muted); }
+    .cold-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lane-color, var(--td-muted)); opacity: 0.85; }
+
     /* --- Day Complete: the Ledger --- */
     .ledger { padding: 0.5rem 0.15rem 0.5rem; }
     .ledger-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--td-muted); }
@@ -489,6 +505,9 @@
 
         <!-- FOCUS mode: rendered only while a task is being tracked. -->
         <section id="td-focus" class="td-focus hidden" aria-live="polite"></section>
+
+        <!-- COLD START mode: idle, nothing logged yet, at/before the first block. -->
+        <section id="td-cold" class="td-rest hidden" aria-live="polite"></section>
 
         <!-- IDLE mode: the Launchpad. -->
         <section id="td-idle" class="td-idle">
@@ -1061,7 +1080,7 @@
 
     // Top-level entry: pick Idle or Focus and render it. Focus (tracking) always
     // wins; the idle path then chooses among its own sub-views by block state.
-    const IDLE_SECTIONS = ['td-idle', 'td-break', 'td-done'];
+    const IDLE_SECTIONS = ['td-idle', 'td-break', 'td-done', 'td-cold'];
     const renderTodayView = (metrics) => {
       lastPullWall = Date.now();
       const focusEl = document.getElementById('td-focus');
@@ -1098,7 +1117,10 @@
       const show = (id) => { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
       const hideOthers = (keep) => IDLE_SECTIONS.filter(id => id !== keep)
         .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
-      if (state === 'upcoming') {
+      if (isColdStart(blocks, now, todayMs)) {
+        hideOthers('td-cold'); show('td-cold');
+        renderColdStart(metrics, stats, now, blocks);
+      } else if (state === 'upcoming') {
         hideOthers('td-break'); show('td-break');
         renderOnBreak(metrics, res, now, blocks);
       } else if (state === 'done') {
@@ -1140,6 +1162,75 @@
       const totalMs = (endH - startH) * 3600000;
       const elapsedMs = Math.min(Math.max(0, (nowH - startH) * 3600000), totalMs);
       return { startH, endH, elapsedMs, totalMs, pct: totalMs > 0 ? (elapsedMs / totalMs) * 100 : 0 };
+    };
+
+    // --- IDLE / cold start: nothing logged yet, standing at or before the first
+    // block (no block has ended). The hardest moment to begin, so the instrument
+    // deliberately goes quiet here — no deficit, no goal bar, no squeeze, no
+    // percentages, no streak. Just a warm sentence, an open horizon, how to begin,
+    // and the day's lanes waiting. Honest data only: with 0m logged there is
+    // nothing to count. Pure predicate so the routing is testable.
+    const isColdStart = (blocks, now, todayMs) =>
+      (todayMs || 0) === 0 && previousBlock(blocks, now) === null;
+
+    // The open horizon: a no-fill sibling of renderDayTimeline. Same span/scale
+    // math, but every block is drawn empty (nothing logged), the current/first
+    // block outlined as a locator, and a now marker sits where the day stands.
+    // The emptiness is the point — open road, not a status bar.
+    const renderColdHorizon = (now, blocks, curBlock) => {
+      const list = (blocks || []).slice().sort((a, b) => a.start - b.start);
+      if (!list.length) return '';
+      const spanStart = list[0].start, spanEnd = list[list.length - 1].end;
+      const span = Math.max(0.5, spanEnd - spanStart);
+      const nowH = hourOf(now);
+      const pos = (h) => Math.min(Math.max((h - spanStart) / span, 0), 1) * 100;
+      const segs = list.map(b => {
+        const left = pos(b.start), width = pos(b.end) - left;
+        const isCur = curBlock && b.id === curBlock.id;
+        return `<span class="ch-seg intensity-${b.intensity}${isCur ? ' current' : ''}" style="left:${left}%;width:${width}%"></span>`;
+      }).join('');
+      const marker = (nowH >= spanStart && nowH <= spanEnd) ? `<span class="ch-now" style="left:${pos(nowH)}%"></span>` : '';
+      return segs + marker;
+    };
+
+    const renderColdStart = (metrics, stats, now, blocks) => {
+      const el = document.getElementById('td-cold');
+      if (!el) return;
+      const list = (blocks || []).slice().sort((a, b) => a.start - b.start);
+      const nowH = hourOf(now);
+      const cur = blockAtTime(list, nowH);                 // in a block, or null
+      const first = list[0] || null;
+      const anchor = cur || first;                          // block to name / outline
+
+      // Hero: a sentence, never a number. Frames the available time as room.
+      let hero;
+      if (!anchor) hero = 'The day is open.';
+      else if (cur) hero = `Your <b>${escHtml(anchor.label)}</b> is open.`;
+      else hero = `Your <b>${escHtml(anchor.label)}</b> starts at ${formatHour(anchor.start)}.`;
+
+      const horizon = list.length ? renderColdHorizon(now, list, anchor) : '';
+      const rail = anchor
+        ? `<span class="ch-rail-now">now</span><span class="ch-rail-mid">${escHtml(anchor.label)}</span><span class="ch-rail-end">${formatHour(list[list.length - 1].end)}</span>`
+        : '';
+
+      // Lanes waiting: muted color-dot chips, no bars, no 0%. Shows the structure
+      // is set up (cuts decision load) without any progress framing. Ungrouped last.
+      const ordered = orderLanes(stats).filter(s => !s.isUngrouped);
+      const chips = ordered.map(s =>
+        `<span class="cold-chip"><span class="cold-chip-dot" style="--lane-color:${s.color}"></span>${escHtml(s.name)}</span>`
+      ).join('');
+
+      const intensityClass = anchor ? ' intensity-' + anchor.intensity : '';
+      el.className = 'td-rest';
+      el.innerHTML = `
+        <div class="cold${intensityClass}">
+          <div class="cold-eyebrow">Ready when you are</div>
+          <div class="cold-hero">${hero}</div>
+          ${horizon ? `<div class="cold-horizon">${horizon}</div>
+          <div class="cold-rail">${rail}</div>` : ''}
+          <div class="cold-begin">Start anything in Super Productivity and this becomes your focus timer.</div>
+          ${chips ? `<div class="cold-lanes">${chips}</div>` : ''}
+        </div>`;
     };
 
     // --- IDLE / between blocks: On a Break. Calm, one focal point (time to the
@@ -2621,6 +2712,8 @@
     window.computeRunway = computeRunway;
     window.blockAtTime = blockAtTime;
     window.previousBlock = previousBlock;
+    window.isColdStart = isColdStart;
+    window.renderColdStart = renderColdStart;
     window.computeBreakProgress = computeBreakProgress;
     window.formatTimeShort = formatTimeShort;
     window.renderDaySpine = renderDaySpine;
@@ -2726,7 +2819,7 @@
         console.log("[sp-dashboard] No PluginAPI detected. Loading mock data...");
 
         // Standalone dev + screenshots. Pick a state with ?scenario=NAME:
-        //   idle (default) | met | empty | focus | focus-met | focus-ungrouped
+        //   idle (default) | cold | met | empty | focus | focus-met | focus-ungrouped
         // The wall-clock (usable-day / squeeze / day's-over) is orthogonal — fake
         // it in the browser or via scripts/screenshots.mjs. Data here is
         // deterministic per scenario so screenshots are stable.
@@ -2734,6 +2827,7 @@
         const scenario = params.get('scenario') || (/(\?|&)focus\b/.test(location.search) ? 'focus' : 'idle');
         const d = (n) => toLocalDateStr(new Date(Date.now() - n * 86400000));
         const met = (scenario === 'met' || scenario === 'focus-met');
+        const cold = (scenario === 'cold');   // 0m today: Cold Start (pair with a pre/early-block clock)
 
         cachedProjects = [
           { id: "p1", title: "Elements of Computing Systems", theme: { primary: "#7aa2f7" } },
@@ -2761,9 +2855,9 @@
 
         cachedTasks = [
           { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",
-            timeSpentOnDay: { [d(0)]: met ? 10800000 : 4800000 } },
+            timeSpentOnDay: cold ? {} : { [d(0)]: met ? 10800000 : 4800000 } },
           { id: "m-today", parentId: null, title: "Curl & divergence problem set", isDone: false, projectId: "p2",
-            timeSpentOnDay: { [d(0)]: met ? 7200000 : 5400000 } },
+            timeSpentOnDay: cold ? {} : { [d(0)]: met ? 7200000 : 5400000 } },
           { id: "g-today", parentId: null, title: "Deutsch A2 — Lektion 4", isDone: false, projectId: "p3",
             timeSpentOnDay: met ? { [d(0)]: 3600000 } : {} },
           { id: "hist", parentId: null, title: "Session history", isDone: false, projectId: "p1",

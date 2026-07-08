@@ -19,6 +19,8 @@ const FILE = 'file://' + path.join(ROOT, 'sp-dashboard', 'index.html');
 
 // name, scenario query, "HH:MM" faked clock, optional tab to open, height.
 const SHOTS = [
+  { name: '00-cold-start',      scenario: 'cold',            at: '09:00', h: 620, desc: 'Cold Start — nothing logged yet, inside the first block; the instrument goes quiet' },
+  { name: '00b-cold-pre-block', scenario: 'cold',            at: '07:30', h: 620, desc: 'Cold Start — before the first block starts; day not yet begun' },
   { name: '01-idle',            scenario: 'idle',            at: '10:00', h: 780, desc: 'Launchpad — the hard morning block, counting down to 2 PM' },
   { name: '02-idle-squeeze',    scenario: 'squeeze',         at: '13:30', h: 780, desc: "Launchpad — the hard block's nearly over and the goal won't fit (squeeze)" },
   { name: '03-idle-goal-met',   scenario: 'met',             at: '17:00', h: 780, desc: 'Launchpad — every lane met for today' },

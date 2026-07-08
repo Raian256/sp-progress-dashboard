@@ -95,6 +95,9 @@ describe('Date Range Reporter UI', () => {
         isDone: false,
         timeSpentOnDay: {}
       };
+      // Pin to the afternoon block: at 0m today the morning has already ended, so
+      // this is the Launchpad (not Cold Start), which surfaces the totals on #runway.
+      const d = new Date(); d.setHours(17, 0, 0, 0); vi.setSystemTime(d);
       window.processData([task], []);
       // no time entries, no due date -> zero time
       expect(document.getElementById('runway').textContent).toContain('0h 0m today');
@@ -110,6 +113,9 @@ describe('Date Range Reporter UI', () => {
         dueDay: todayStr,
         timeSpentOnDay: {}
       };
+      // Afternoon block, so 0m today renders the Launchpad (not Cold Start) and the
+      // totals show on #runway.
+      const d = new Date(); d.setHours(17, 0, 0, 0); vi.setSystemTime(d);
       window.processData([taskDueToday], []);
       // Task due today with no time: zero period and today time
       const runway = document.getElementById('runway').textContent;
@@ -208,6 +214,8 @@ describe('Date Range Reporter UI', () => {
         { id: 'g1', name: 'A', weeklyGoalH: 10, dailyGoalH: 1, projectIds: [] },
         { id: 'g2', name: 'B', weeklyGoalH: 5, dailyGoalH: 2, projectIds: [] }
       ]);
+      // Afternoon block so 0m today renders the Launchpad lanes (not Cold Start).
+      const d = new Date(); d.setHours(17, 0, 0, 0); vi.setSystemTime(d);
       window.processData([], []);
       expect(window.getTotalWeeklyGoalH()).toBe(15);
       expect(window.getTotalDailyGoalH()).toBe(3);
@@ -389,6 +397,42 @@ describe('Date Range Reporter UI', () => {
       expect(done.textContent).toContain('Last block ended');
       expect(done.querySelector('.ledger-spine')).not.toBe(null);   // the day spine
       expect(done.querySelectorAll('.ds-row').length).toBe(2);       // one node per block
+    });
+
+    it('isColdStart fires only at 0m with no block yet ended', () => {
+      const blocks = twoBlocks();
+      expect(window.isColdStart(blocks, at(7), 0)).toBe(true);        // before the first block
+      expect(window.isColdStart(blocks, at(10), 0)).toBe(true);       // inside the first block
+      expect(window.isColdStart(blocks, at(10), 60000)).toBe(false);  // something logged
+      expect(window.isColdStart(blocks, at(15), 0)).toBe(false);      // morning ended -> break
+      expect(window.isColdStart(blocks, at(21), 0)).toBe(false);      // past the day
+      expect(window.isColdStart([], at(10), 0)).toBe(true);           // no blocks configured
+    });
+
+    it('idle at 0m inside the first block renders Cold Start (and hides the others)', () => {
+      setupRest();
+      const d = new Date(); d.setHours(9, 0, 0, 0); vi.setSystemTime(d);
+      window.renderTodayView({ ...restMetrics(), todayTimeSpent: 0 });
+      const cold = document.getElementById('td-cold');
+      expect(cold.classList.contains('hidden')).toBe(false);
+      expect(document.getElementById('td-idle').classList.contains('hidden')).toBe(true);
+      expect(document.getElementById('td-break').classList.contains('hidden')).toBe(true);
+      expect(document.getElementById('td-done').classList.contains('hidden')).toBe(true);
+      expect(cold.textContent).toContain('Ready when you are');
+      expect(cold.textContent).toContain('Morning');                 // the anchor block, named
+      expect(cold.textContent).toContain('Super Productivity');      // the how-to-begin line
+      expect(cold.querySelector('.cold-horizon')).not.toBe(null);    // the open horizon
+      expect(cold.querySelector('.ch-seg.current')).not.toBe(null);  // first block outlined
+      // The instrument goes quiet: no goal bar, no counting.
+      expect(cold.querySelector('.runway-bar')).toBe(null);
+    });
+
+    it('Cold Start hands back to the Launchpad once the first minute is logged', () => {
+      setupRest();
+      const d = new Date(); d.setHours(9, 0, 0, 0); vi.setSystemTime(d);
+      window.renderTodayView({ ...restMetrics(), todayTimeSpent: 30 * 60000 });
+      expect(document.getElementById('td-cold').classList.contains('hidden')).toBe(true);
+      expect(document.getElementById('td-idle').classList.contains('hidden')).toBe(false);
     });
   });
 
