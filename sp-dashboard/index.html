@@ -415,6 +415,10 @@
     .runway-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: var(--td-go-soft); transition: width 0.6s ease; }
     .runway-need-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: linear-gradient(90deg, rgba(224,164,88,0.35), rgba(224,164,88,0.6)); transition: width 0.6s ease; }
     .runway-need-fill.calm { background: linear-gradient(90deg, rgba(86,200,166,0.4), rgba(86,200,166,0.7)); }
+    /* The floor already earned, kept visible under the live fill so clearing it reads
+       as banked rather than lost when the bar rescales to the full day goal. */
+    .runway-bar-secured { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: linear-gradient(90deg, rgba(86,200,166,0.75), rgba(86,200,166,0.95)); transition: width 0.6s ease; }
+    .runway-bar-ok { color: var(--td-go); }
 
     /* --- Lanes --- */
     .lanes-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 1.6rem 0 0.85rem; }
@@ -441,6 +445,22 @@
     .mom-cell.today { background: transparent; box-shadow: inset 0 0 0 2px var(--td-go); }
     .momentum-label { font-size: 0.85rem; color: var(--td-muted); }
     .momentum-label b { color: var(--td-ink); font-weight: 700; }
+
+    /* --- Streak tree: the same tree, small on idle, big at day's end. Grows with
+       steady days (a leaky accumulator), blooms flowers with the live streak. --- */
+    .streak-tree { display: flex; flex-direction: column; align-items: center; }
+    .streak-tree .st-svg { display: block; height: auto; overflow: visible; }
+    .streak-tree--sm { margin-top: 1.5rem; }
+    .streak-tree--sm .st-svg { width: 104px; }
+    .streak-tree--lg { margin: 0.4rem auto 0.3rem; }
+    .streak-tree--lg .st-svg { width: min(248px, 66%); }
+    .st-ground { fill: var(--td-go); opacity: 0.13; }
+    .st-branch { fill: none; stroke: var(--td-go); stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+    .st-halo { fill: var(--td-go); opacity: 0.06; }        /* stacked translucent circles = soft glow */
+    .st-petal { fill: var(--td-go); opacity: 0.22; }
+    .st-core { fill: var(--td-go); fill: color-mix(in srgb, var(--td-go) 55%, #ffffff); opacity: 0.92; }
+    .streak-tree-cap { margin-top: 0.5rem; font-size: 0.78rem; color: var(--td-muted); text-align: center; }
+    .streak-tree-cap b { color: var(--td-ink); font-weight: 700; }
 
     /* --- Focus mode (Engine) --- */
     .td-focus { --focus-color: var(--td-go); display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0.5rem 1rem 1rem; }
@@ -517,6 +537,9 @@
 
           <!-- Momentum: recent days at a glance, right under the day. -->
           <div id="momentum" class="momentum"></div>
+
+          <!-- The streak tree, small — grows up into the big one at day's end. -->
+          <div id="td-tree-sm"></div>
 
           <div class="lanes-head">
             <h3 class="lanes-title">Lanes</h3>
@@ -636,6 +659,10 @@
                 <option value="0">Sunday</option>
               </select>
             </div>
+            <div class="setting-field">
+              <label for="day-floor-pct">A day counts at (% of daily goal)</label>
+              <input type="number" id="day-floor-pct" min="5" max="100" step="5">
+            </div>
           </div>
         </div>
 
@@ -706,6 +733,14 @@
     // --- INITIALIZE UI ---
     const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
+    // The fraction of the daily goal a day must clear to "count" toward the streak
+    // and tree. User-configurable in Settings; defaults to 0.3. Clamped to a sane band.
+    const getDayFloorFrac = () => {
+      const raw = parseFloat(localStorage.getItem('sp-dashboard-day-floor-frac'));
+      if (!Number.isFinite(raw) || raw <= 0) return 0.3;
+      return Math.min(Math.max(raw, 0.05), 1);
+    };
+
     const weekStartDaySelect = document.getElementById('week-start-day');
     const savedWeekStartDay = localStorage.getItem('sp-dashboard-week-start-day');
     if (savedWeekStartDay) weekStartDaySelect.value = savedWeekStartDay;
@@ -714,6 +749,20 @@
       localStorage.setItem('sp-dashboard-week-start-day', weekStartDaySelect.value);
       processData(cachedTasks, cachedProjects);
     });
+
+    // "A day counts at X% of the daily goal" — stored as a fraction (0.3 = 30%).
+    const dayFloorInput = document.getElementById('day-floor-pct');
+    if (dayFloorInput) {
+      dayFloorInput.value = Math.round(getDayFloorFrac() * 100);
+      dayFloorInput.addEventListener('change', () => {
+        let pct = parseInt(dayFloorInput.value, 10);
+        if (!Number.isFinite(pct)) pct = 30;
+        pct = Math.min(Math.max(pct, 5), 100);
+        dayFloorInput.value = pct;
+        localStorage.setItem('sp-dashboard-day-floor-frac', String(pct / 100));
+        processData(cachedTasks, cachedProjects);
+      });
+    }
     const barChartUnit = document.getElementById('bar-chart-unit');
     const barChartDisplay = document.getElementById('bar-chart-display');
     const barChartCountInput = document.getElementById('bar-chart-count');
@@ -1041,6 +1090,28 @@
       return { state, block, nextBlock, leftMs, capacityMs, neededMs, neededPct, squeeze };
     };
 
+    // Pure: the goal bar's two stages. Below the streak floor (the minimum a day must
+    // clear to count), the bar is scaled to the *floor* — so the first, hardest stretch
+    // reads as a bar you can actually fill. Once cleared, the bar re-means: it rescales
+    // to the full daily goal, and the floor it already earned stays drawn as a secured
+    // segment rather than vanishing. `pct` is the live fill, `floorPct` the secured part
+    // (0 until the floor is met, so nothing is promised before it's earned).
+    const computeGoalBar = (todayMs, dailyGoalMs, floorFrac) => {
+      const goal = dailyGoalMs > 0 ? dailyGoalMs : 0;
+      const today = Math.max(0, todayMs || 0);
+      if (goal <= 0) return { stage: 'none', pct: 0, floorPct: 0, floorMs: 0, goalMs: 0, floorMet: false };
+      const floorMs = goal * Math.min(Math.max(floorFrac, 0.05), 1);
+      if (today < floorMs) {
+        return { stage: 'floor', pct: Math.min((today / floorMs) * 100, 100), floorPct: 0, floorMs, goalMs: goal, floorMet: false };
+      }
+      return {
+        stage: 'goal',
+        pct: Math.min((today / goal) * 100, 100),
+        floorPct: Math.min((floorMs / goal) * 100, 100),
+        floorMs, goalMs: goal, floorMet: true,
+      };
+    };
+
     // Inner HTML for the thin day-timeline: one segment per block (gaps left empty),
     // each filled by its own elapsed time, the current block outlined, plus a now
     // marker. Scale spans the first block's start to the last block's end. Shared by
@@ -1137,6 +1208,7 @@
       renderRunway(metrics);
       renderLanes(metrics, stats);
       renderMomentum(metrics);
+      renderTreeSmall();
     };
 
     // Pure: the block that most recently ended before now (largest end <= nowH),
@@ -1272,6 +1344,7 @@
           </div>
           <div class="pause-rest">${restCap}</div>
           <div class="pause-foot">${footLead} &middot; <b>${formatTimeShort(todayMs)}</b> today</div>
+          ${treeHtml('sm')}
         </div>`;
     };
 
@@ -1344,6 +1417,7 @@
             <span class="ledger-num">${formatTimeShort(todayMs)}</span>
             <span class="ledger-goal">${goalHtml}</span>
           </div>
+          ${treeHtml('lg')}
           ${renderDaySpine(blocks)}
           ${lastEnd !== null ? `<div class="ledger-endline">Last block ended ${formatHour(lastEnd)}</div>` : ''}
           <div class="ledger-sec">Lanes settled</div>
@@ -1364,10 +1438,15 @@
       const res = computeRunway(now, blocks, dailyGoalMs, todayMs);
       const { state, block, nextBlock, leftMs, neededMs, squeeze } = res;
 
-      // The goal bar always means the same thing: today's progress toward the daily
-      // goal. Consistency matters more than cleverness here — the block/time pressure
-      // lives in the big number and status line, not the bar.
-      const goalPct = dailyGoalMs > 0 ? Math.min((todayMs / dailyGoalMs) * 100, 100) : 0;
+      // The goal bar runs in two stages: fill the streak floor first, then the day's
+      // goal (see computeGoalBar). The block/time pressure still lives in the big
+      // number and status line, never in the bar.
+      const bar = computeGoalBar(todayMs, dailyGoalMs, getDayFloorFrac());
+      const barLabel = bar.stage === 'floor'
+        ? `Day counts at ${formatTime(bar.floorMs)}`
+        : bar.floorMet
+          ? `Today's goal <span class="runway-bar-ok">&middot; day counts</span>`
+          : `Today's goal`;
 
       // Soft (easy/overflow) blocks stay calm: the amber squeeze cue is suppressed
       // on them, even when the daily goal is genuinely tight.
@@ -1415,8 +1494,8 @@
         </div>
         ${timelineInner ? `<div class="runway-day">${timelineInner}</div>` : ''}
         ${caption ? `<div class="runway-day-caption"><span>${captionLead}</span><span>${caption}</span></div>` : ''}
-        <div class="runway-bar-label">Today's goal</div>
-        <div class="runway-bar"><div class="runway-need-fill calm" style="width:${goalPct}%"></div></div>
+        <div class="runway-bar-label">${barLabel}</div>
+        <div class="runway-bar"><div class="runway-need-fill calm" style="width:${bar.pct}%"></div>${bar.floorPct > 0 ? `<div class="runway-bar-secured" style="width:${bar.floorPct}%"></div>` : ''}</div>
         <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(todayMs)} today &middot; ${formatTime(weekMs)} this week</div>`;
     };
 
@@ -1465,11 +1544,18 @@
     // The 14-day momentum grid + streak, computed once so both the Launchpad and
     // Day Complete render the same strip. A day "counts" at 1/3 the daily goal
     // (or 30m if no goal); today's miss doesn't break the streak (it's unfinished).
-    const computeMomentum = (metrics) => {
+    // Per-day totals across all tasks + the daily floor a day must clear to "count".
+    // Single-sourced so the momentum strip and the streak tree never drift.
+    const dayHistory = () => {
       const dayTotals = {};
       cachedTasks.forEach(t => { for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms; });
       const dailyGoalMs = getTotalDailyGoalH() * 3600000;
-      const floorMs = dailyGoalMs > 0 ? dailyGoalMs / 3 : 30 * 60000;
+      const floorMs = dailyGoalMs > 0 ? dailyGoalMs * getDayFloorFrac() : 30 * 60000;
+      return { dayTotals, floorMs };
+    };
+
+    const computeMomentum = (metrics) => {
+      const { dayTotals, floorMs } = dayHistory();
       const today = new Date();
       const N = 14;
       const cells = [];
@@ -1502,6 +1588,126 @@
       if (!el) return;
       const m = computeMomentum(metrics);
       el.innerHTML = `<div class="momentum-cells">${m.cellsHtml}</div><div class="momentum-label">${m.label}</div>`;
+    };
+
+    // --- Streak tree ---------------------------------------------------------
+    // Two continuous drivers, no discrete thresholds:
+    //  • g (0..1): fullness — a capped leaky accumulator over the day history.
+    //    A qualifying day eases g toward 1 (fast when small); a missed day trims
+    //    it a fixed fraction — a visible shrink that can never reach bare ground
+    //    (no reset). g drives the tree's size and how many branch generations
+    //    have grown in, so growth/shrink read continuously day to day.
+    //  • bloom (0..1): the live-streak reward — blossom size, density and glow.
+    //    Floored above zero so a broken streak dims the canopy rather than
+    //    stripping it bare (calm, not punishing), and grows smoothly, never in
+    //    "one more flower every N days" steps.
+    const TREE_RISE = 0.28, TREE_FALL = 0.30, TREE_WINDOW = 180;
+    const computeTreeState = () => {
+      const { dayTotals, floorMs } = dayHistory();
+      const today = new Date();
+      const hitOn = (offset) => {
+        const d = new Date(today); d.setDate(today.getDate() - offset);
+        return (dayTotals[toLocalDateStr(d)] || 0) >= floorMs;
+      };
+      let g = 0;
+      // Walk oldest -> yesterday. Empty pre-history days are misses but leave g at 0.
+      for (let i = TREE_WINDOW; i >= 1; i--) {
+        g = hitOn(i) ? g + TREE_RISE * (1 - g) : g * (1 - TREE_FALL);
+      }
+      // Today is unfinished: only ever a gain, never a penalty (mirrors the streak).
+      const todayHit = hitOn(0);
+      if (todayHit) g = g + TREE_RISE * (1 - g);
+      let streak = 0;
+      for (let i = 0; i < 500; i++) {
+        if (hitOn(i)) streak++;
+        else if (i > 0) break;   // today's miss doesn't break the streak (unfinished)
+      }
+      // Continuous, saturating bloom from the streak; floored so it never strips bare.
+      const bloom = 0.25 + 0.75 * (1 - Math.exp(-streak / 12));
+      return { g, bloom, streak, todayHit, floorMs };
+    };
+
+    // A small seeded PRNG keeps the blossom scatter organic yet stable across the
+    // idempotent re-renders (no jarring reshuffle every refresh).
+    const treeRng = (seed) => {
+      let a = seed >>> 0;
+      return () => {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    // A recursive, Grove-style tree: colour-tinted branches fanning up into
+    // glowing blossom clusters. Structure grows continuously — g maps to a
+    // fractional branch depth, so the frontier generation extends smoothly (and
+    // retracts on a shrink) instead of new limbs popping in at once.
+    const TREE_MAX_DEPTH = 4.6, TREE_HARD_MAX = 6, TREE_SPREAD = 0.40;
+    const streakTreeSvg = (st) => {
+      const g = st.g, bloom = st.bloom;
+      const baseX = 60, baseY = 130;
+      const growth = g * TREE_MAX_DEPTH;   // continuous fractional depth
+      const rng = treeRng(0x9E3779B9);
+      let branches = '', halos = '', cores = '';
+
+      const addBlossom = (cx, cy, sz) => {
+        const R = (2.6 + 3.4 * bloom) * (0.45 + 0.55 * sz);
+        halos += `<circle class="st-halo" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(R * 2.3).toFixed(1)}"/>`;
+        const k = 2 + Math.round((1 + 2 * bloom) * sz);
+        for (let i = 0; i < k; i++) {
+          const ang = rng() * 6.2832, rad = Math.sqrt(rng()) * R * 0.95;
+          const px = cx + Math.cos(ang) * rad, py = cy + Math.sin(ang) * rad;
+          const dr = R * (0.26 + rng() * 0.2);
+          halos += `<circle class="st-petal" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(dr * 1.7).toFixed(1)}"/>`;
+          cores += `<circle class="st-core" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${dr.toFixed(1)}"/>`;
+        }
+      };
+
+      const branch = (x, y, angle, len, width, gen) => {
+        const seg = growth - gen;
+        if (seg <= 0 || gen > TREE_HARD_MAX) return;
+        const scale = Math.min(1, seg);          // this segment's grown fraction
+        const L = len * scale;
+        const ex = x + Math.sin(angle) * L, ey = y - Math.cos(angle) * L;
+        const bow = L * 0.08 * (angle >= 0 ? 1 : -1);
+        const mx = (x + ex) / 2 + Math.cos(angle) * bow, my = (y + ey) / 2;
+        branches += `<path class="st-branch" d="M${x.toFixed(1)},${y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" style="stroke-width:${(width * scale).toFixed(2)}"/>`;
+        const childSeg = growth - (gen + 1);
+        const c = Math.min(1, Math.max(0, childSeg));
+        const bloomHere = (1 - c) * scale;       // blossom fades out as children grow in
+        if (bloomHere > 0.03) addBlossom(ex, ey, bloomHere);
+        if (childSeg > 0) {
+          const nLen = len * 0.76, nWidth = width * 0.66;
+          const j = () => (rng() - 0.5) * 0.14;
+          branch(ex, ey, angle - TREE_SPREAD + j(), nLen, nWidth, gen + 1);
+          branch(ex, ey, angle + TREE_SPREAD + j(), nLen, nWidth, gen + 1);
+          if (gen < 2) branch(ex, ey, angle + j() * 2, nLen * 0.82, nWidth, gen + 1);
+        }
+      };
+
+      branch(baseX, baseY, 0, 22 + g * 8, 4.4 + g * 1.4, 0);
+      const groundR = 15 + g * 16;
+      return `<svg viewBox="0 0 120 140" class="st-svg" aria-hidden="true" preserveAspectRatio="xMidYMax meet">`
+        + `<ellipse class="st-ground" cx="${baseX}" cy="${(baseY + 2).toFixed(1)}" rx="${groundR.toFixed(1)}" ry="3.4"/>`
+        + `${branches}${halos}${cores}</svg>`;
+    };
+
+    const treeHtml = (size, state) => {
+      const st = state || computeTreeState();
+      const label = st.streak > 0 ? `Growth tree: ${st.streak}-day streak` : 'Growth tree';
+      let cap = '';
+      if (size === 'lg') {
+        cap = st.streak > 0
+          ? `<div class="streak-tree-cap"><b>${st.streak}</b>-day streak</div>`
+          : `<div class="streak-tree-cap">a steady grove grows here</div>`;
+      }
+      return `<div class="streak-tree streak-tree--${size}" role="img" aria-label="${label}">${streakTreeSvg(st)}${cap}</div>`;
+    };
+
+    const renderTreeSmall = () => {
+      const el = document.getElementById('td-tree-sm');
+      if (el) el.innerHTML = treeHtml('sm');
     };
 
     // --- FOCUS: Engine ---
@@ -2710,6 +2916,7 @@
     window.renderHeatmap = renderHeatmap;
     window.resolveTrackingMode = resolveTrackingMode;
     window.computeRunway = computeRunway;
+    window.computeGoalBar = computeGoalBar;
     window.blockAtTime = blockAtTime;
     window.previousBlock = previousBlock;
     window.isColdStart = isColdStart;
@@ -2719,6 +2926,9 @@
     window.renderDaySpine = renderDaySpine;
     window.orderLanes = orderLanes;
     window.computeMomentum = computeMomentum;
+    window.computeTreeState = computeTreeState;
+    window.treeHtml = treeHtml;
+    window.getDayFloorFrac = getDayFloorFrac;
     window.loadBlocks = loadBlocks;
     window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
@@ -2819,7 +3029,9 @@
         console.log("[sp-dashboard] No PluginAPI detected. Loading mock data...");
 
         // Standalone dev + screenshots. Pick a state with ?scenario=NAME:
-        //   idle (default) | cold | met | empty | focus | focus-met | focus-ungrouped
+        //   idle (default) | cold | starting | met | empty | focus | focus-met | focus-ungrouped
+        // Orthogonally, ?tree=STAGE (sprout|sapling|growing|flourishing|dimmed)
+        // reshapes the day history to preview the streak tree's growth.
         // The wall-clock (usable-day / squeeze / day's-over) is orthogonal — fake
         // it in the browser or via scripts/screenshots.mjs. Data here is
         // deterministic per scenario so screenshots are stable.
@@ -2828,6 +3040,7 @@
         const d = (n) => toLocalDateStr(new Date(Date.now() - n * 86400000));
         const met = (scenario === 'met' || scenario === 'focus-met');
         const cold = (scenario === 'cold');   // 0m today: Cold Start (pair with a pre/early-block clock)
+        const starting = (scenario === 'starting'); // 25m today: under the streak floor, so the goal bar is in its floor stage
 
         cachedProjects = [
           { id: "p1", title: "Elements of Computing Systems", theme: { primary: "#7aa2f7" } },
@@ -2855,9 +3068,9 @@
 
         cachedTasks = [
           { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",
-            timeSpentOnDay: cold ? {} : { [d(0)]: met ? 10800000 : 4800000 } },
+            timeSpentOnDay: cold ? {} : starting ? { [d(0)]: 1500000 } : { [d(0)]: met ? 10800000 : 4800000 } },
           { id: "m-today", parentId: null, title: "Curl & divergence problem set", isDone: false, projectId: "p2",
-            timeSpentOnDay: cold ? {} : { [d(0)]: met ? 7200000 : 5400000 } },
+            timeSpentOnDay: (cold || starting) ? {} : { [d(0)]: met ? 7200000 : 5400000 } },
           { id: "g-today", parentId: null, title: "Deutsch A2 — Lektion 4", isDone: false, projectId: "p3",
             timeSpentOnDay: met ? { [d(0)]: 3600000 } : {} },
           { id: "hist", parentId: null, title: "Session history", isDone: false, projectId: "p1",
@@ -2867,6 +3080,31 @@
               [d(11)]: 7200000, [d(12)]: 10800000, [d(13)]: 9000000
             } }
         ];
+
+        // ?tree=STAGE overrides the day history to preview the streak tree at a
+        // given growth: sprout | sapling | growing | flourishing | dimmed. Each
+        // qualifying day logs 3h (above the 2h floor); 'dimmed' has a long history
+        // but the last two days missed — streak 0, so the canopy dims to its floor
+        // while the tree structure persists (shrink/dim, not reset).
+        const treeStage = params.get('tree');
+        if (treeStage) {
+          const HIT = 10800000; // 3h — clears the 2h daily floor
+          const runs = {
+            sprout:      [1],
+            sapling:     [1, 2, 3, 4],
+            growing:     Array.from({ length: 13 }, (_, i) => i + 1),
+            flourishing: Array.from({ length: 44 }, (_, i) => i + 1),
+            dimmed:      Array.from({ length: 43 }, (_, i) => i + 2) // today + yesterday missed
+          };
+          const hits = runs[treeStage] || [];
+          const tsd = {};
+          hits.forEach(o => { tsd[d(o)] = HIT; });
+          cachedTasks = [
+            { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",
+              timeSpentOnDay: treeStage === 'dimmed' ? {} : { [d(0)]: HIT } },
+            { id: "hist", parentId: null, title: "Session history", isDone: false, projectId: "p1", timeSpentOnDay: tsd }
+          ];
+        }
 
         if (scenario === 'focus-ungrouped') {
           cachedProjects.push({ id: "p4", title: "Deep Reading", theme: { primary: "#bb9af7" } });

@@ -226,6 +226,119 @@ describe('Date Range Reporter UI', () => {
     });
   });
 
+  describe('Streak tree growth', () => {
+    // A day "counts" at 30m when no daily goal is set (saveGroups([]) forces that).
+    const dayStr = (offset) => {
+      const d = new Date(); d.setDate(d.getDate() - offset);
+      return window.toLocalDateStr(d);
+    };
+    const treeFor = (offsets, ms = 45 * 60000) => {
+      localStorage.clear();
+      window.saveGroups([]);
+      const tsd = {};
+      offsets.forEach(o => { tsd[dayStr(o)] = ms; });
+      window.processData([{ id: 'h', parentId: null, title: 'hist', isDone: false, timeSpentOnDay: tsd }], []);
+      return window.computeTreeState();
+    };
+
+    it('is bare with no history', () => {
+      const t = treeFor([]);
+      expect(t.g).toBe(0);
+      expect(t.streak).toBe(0);
+    });
+
+    it('grows visibly fast in the first days, and monotonically', () => {
+      const g1 = treeFor([1]).g;
+      const g3 = treeFor([1, 2, 3]).g;
+      const g6 = treeFor([1, 2, 3, 4, 5, 6]).g;
+      expect(g1).toBeGreaterThan(0.24);
+      expect(g1).toBeLessThan(0.32);        // ~RISE after one day
+      expect(g3).toBeGreaterThan(g1);
+      expect(g6).toBeGreaterThan(g3);
+      expect(g6).toBeGreaterThan(0.7);      // lush within a week
+    });
+
+    it('an unfinished today (nothing logged) does not shrink the tree', () => {
+      // Three past hits alone should reach ~0.63; a today-penalty would drop it to ~0.44.
+      expect(treeFor([1, 2, 3]).g).toBeGreaterThan(0.6);
+      // And logging today only adds on top.
+      expect(treeFor([0, 1, 2, 3]).g).toBeGreaterThan(treeFor([1, 2, 3]).g);
+    });
+
+    it('a missed day shrinks the tree but never resets it', () => {
+      const gStreak = treeFor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).g;
+      const gMissed = treeFor([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).g; // yesterday missed
+      expect(gMissed).toBeLessThan(gStreak);   // visibly shrinks
+      expect(gMissed).toBeGreaterThan(0.4);    // but keeps a substantial tree — no reset
+    });
+
+    it('never falls to zero after a hit, even with many trailing misses', () => {
+      const g = treeFor([40]).g; // one hit 40 days ago, then all misses
+      expect(g).toBeGreaterThan(0);
+      expect(g).toBeLessThan(0.05);
+    });
+
+    it('bloom grows continuously with the streak, floored above zero and never a step', () => {
+      const b0 = treeFor([]).bloom;                 // no streak
+      const b3 = treeFor([0, 1, 2]).bloom;
+      const b30 = treeFor(Array.from({ length: 30 }, (_, i) => i)).bloom;
+      // Floored so a bare streak still keeps some canopy (calm, not punishing).
+      expect(b0).toBeGreaterThan(0.2);
+      expect(b0).toBeLessThan(0.3);
+      // Monotonic and continuous — a single extra day moves it a little, not in jumps.
+      const b1 = treeFor([0]).bloom, b2 = treeFor([0, 1]).bloom;
+      expect(b1).toBeGreaterThan(b0);
+      expect(b2).toBeGreaterThan(b1);
+      expect(b2 - b1).toBeLessThan(0.1);            // no discrete "one more flower" leap
+      expect(b3).toBeGreaterThan(b1);
+      expect(b30).toBeGreaterThan(b3);
+      expect(b30).toBeLessThan(1);                   // saturates below 1
+    });
+
+    it('a broken streak dims the canopy but keeps the tree standing', () => {
+      const broken = treeFor([2, 3, 4, 5, 6]);       // today + yesterday missed
+      expect(broken.streak).toBe(0);
+      expect(broken.bloom).toBeGreaterThan(0.2);     // canopy dims, not stripped
+      expect(broken.g).toBeGreaterThan(0);           // structure persists
+    });
+
+    it('the day-counts fraction is configurable and defaults to 0.3', () => {
+      localStorage.clear();
+      expect(window.getDayFloorFrac()).toBeCloseTo(0.3, 5);
+      localStorage.setItem('sp-dashboard-day-floor-frac', '0.5');
+      expect(window.getDayFloorFrac()).toBeCloseTo(0.5, 5);
+      localStorage.setItem('sp-dashboard-day-floor-frac', '5');   // clamps to 1
+      expect(window.getDayFloorFrac()).toBe(1);
+      localStorage.setItem('sp-dashboard-day-floor-frac', 'oops'); // invalid -> default
+      expect(window.getDayFloorFrac()).toBeCloseTo(0.3, 5);
+    });
+
+    it('the fraction moves the "day counts" floor for the streak', () => {
+      const ds = (o) => { const d = new Date(); d.setDate(d.getDate() - o); return window.toLocalDateStr(d); };
+      const tsd = { [ds(0)]: 3600000, [ds(1)]: 3600000 }; // 1h today + 1h yesterday
+      const build = () => {
+        window.saveGroups([{ id: 'g', name: 'G', weeklyGoalH: 14, dailyGoalH: 2, projectIds: [], color: '#9ece6a' }]);
+        window.processData([{ id: 'h', parentId: null, title: 'h', isDone: false, timeSpentOnDay: tsd }], []);
+      };
+      localStorage.clear();
+      localStorage.setItem('sp-dashboard-day-floor-frac', '0.3'); // floor 0.6h — 1h counts
+      build();
+      expect(window.computeTreeState().streak).toBe(2);
+      localStorage.setItem('sp-dashboard-day-floor-frac', '0.6'); // floor 1.2h — 1h misses
+      build();
+      expect(window.computeTreeState().streak).toBe(0);
+    });
+
+    it('renders a recursive SVG tree via treeHtml', () => {
+      treeFor([0, 1, 2, 3, 4, 5]);
+      const html = window.treeHtml('lg');
+      expect(html).toContain('<svg');
+      expect(html).toContain('st-branch');       // recursive limbs
+      expect(html).toContain('st-core');         // glowing blossoms
+      expect(html).toContain('streak-tree--lg');
+    });
+  });
+
   describe('Tracking-driven Today view', () => {
     beforeEach(() => localStorage.clear());
 
@@ -307,6 +420,45 @@ describe('Date Range Reporter UI', () => {
       const tight = window.computeRunway(at(13, 30), [blocks[0]], 6 * 3600000, 3 * 3600000);
       expect(tight.state).toBe('active');
       expect(tight.squeeze).toBe(true);
+    });
+
+    it('computeGoalBar fills the streak floor first, then rescales to the day goal', () => {
+      const goal = 6 * 3600000;   // 6h daily goal
+      const floor = 0.3;          // day counts at 1h48m
+
+      // Nothing logged: an empty floor-stage bar, no secured segment.
+      const zero = window.computeGoalBar(0, goal, floor);
+      expect(zero.stage).toBe('floor');
+      expect(zero.pct).toBe(0);
+      expect(zero.floorPct).toBe(0);
+      expect(zero.floorMs).toBe(goal * floor);
+
+      // Half the floor logged is half the *bar* — not 15% of the day.
+      const half = window.computeGoalBar(goal * floor * 0.5, goal, floor);
+      expect(half.stage).toBe('floor');
+      expect(half.pct).toBeCloseTo(50);
+      expect(half.floorMet).toBe(false);
+
+      // Exactly on the floor: the bar flips to the goal stage and banks the floor.
+      const met = window.computeGoalBar(goal * floor, goal, floor);
+      expect(met.stage).toBe('goal');
+      expect(met.floorMet).toBe(true);
+      expect(met.pct).toBeCloseTo(30);
+      expect(met.floorPct).toBeCloseTo(30);
+
+      // Past the floor: the live fill leads, the secured segment stays put behind it.
+      const past = window.computeGoalBar(3 * 3600000, goal, floor);
+      expect(past.pct).toBeCloseTo(50);
+      expect(past.floorPct).toBeCloseTo(30);
+
+      // Goal met (and overshot) clamps at full.
+      expect(window.computeGoalBar(9 * 3600000, goal, floor).pct).toBe(100);
+
+      // No goal set: nothing to fill, and no phantom floor.
+      const none = window.computeGoalBar(2 * 3600000, 0, floor);
+      expect(none.stage).toBe('none');
+      expect(none.pct).toBe(0);
+      expect(none.floorMs).toBe(0);
     });
 
     it('blockAtTime picks the block containing the hour (end exclusive)', () => {
