@@ -83,7 +83,7 @@ describe('Date Range Reporter UI', () => {
 
       // Totals are surfaced on the idle runway ("Xh Ym today · Zh Wm this week").
       const runway = document.getElementById('runway').textContent;
-      expect(runway).toContain('3h 0m today');
+      expect(runway).toContain('3h 0m worked today');
       expect(runway).toContain('3h 0m this week');
     });
 
@@ -100,7 +100,7 @@ describe('Date Range Reporter UI', () => {
       const d = new Date(); d.setHours(17, 0, 0, 0); vi.setSystemTime(d);
       window.processData([task], []);
       // no time entries, no due date -> zero time
-      expect(document.getElementById('runway').textContent).toContain('0h 0m today');
+      expect(document.getElementById('runway').textContent).toContain('0h 0m worked today');
     });
 
     it('should count tasks due today in totalTasks denominator even with no time logged', () => {
@@ -119,7 +119,7 @@ describe('Date Range Reporter UI', () => {
       window.processData([taskDueToday], []);
       // Task due today with no time: zero period and today time
       const runway = document.getElementById('runway').textContent;
-      expect(runway).toContain('0h 0m today');
+      expect(runway).toContain('0h 0m worked today');
       expect(runway).toContain('0h 0m this week');
     });
 

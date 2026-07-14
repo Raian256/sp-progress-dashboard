@@ -387,10 +387,15 @@
 
     /* --- Day runway (idle hero) --- */
     .runway { background: var(--td-surface); border: 1px solid var(--td-line); border-radius: var(--td-radius); padding: 1.25rem 1.35rem; }
-    .runway-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+    .runway-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .runway-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
     .runway-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--td-muted); margin-bottom: 0.3rem; }
     .runway-big { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
     .runway-big .u { font-size: 1.05rem; font-weight: 600; color: var(--td-muted); margin-left: 0.15rem; }
+    /* The day's ledger under the block countdown: same fact, quieter register —
+       the countdown is the moment, this is the record. */
+    .runway-worked { font-size: 1rem; font-weight: 400; color: var(--td-muted); margin-top: 0.55rem; }
+    .runway-worked b { color: var(--td-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
     .runway-need { font-size: 0.9rem; color: var(--td-muted); text-align: right; }
     .runway-need b { color: var(--td-ink); font-weight: 600; }
     .runway-need.squeeze, .runway-need.squeeze b { color: var(--td-warn); }
@@ -452,6 +457,7 @@
     .streak-tree .st-svg { display: block; height: auto; overflow: visible; }
     .streak-tree--sm { margin-top: 1.5rem; }
     .streak-tree--sm .st-svg { width: 104px; }
+    .streak-tree--xs .st-svg { width: 64px; }
     .streak-tree--lg { margin: 0.4rem auto 0.3rem; }
     .streak-tree--lg .st-svg { width: min(248px, 66%); }
     .st-ground { fill: var(--td-go); opacity: 0.13; }
@@ -537,9 +543,6 @@
 
           <!-- Momentum: recent days at a glance, right under the day. -->
           <div id="momentum" class="momentum"></div>
-
-          <!-- The streak tree, small — grows up into the big one at day's end. -->
-          <div id="td-tree-sm"></div>
 
           <div class="lanes-head">
             <h3 class="lanes-title">Lanes</h3>
@@ -1208,7 +1211,6 @@
       renderRunway(metrics);
       renderLanes(metrics, stats);
       renderMomentum(metrics);
-      renderTreeSmall();
     };
 
     // Pure: the block that most recently ended before now (largest end <= nowH),
@@ -1489,14 +1491,18 @@
           <div>
             <div class="runway-eyebrow">${eyebrow}</div>
             <div class="runway-big">${big}</div>
+            <div class="runway-worked"><b>${formatTime(todayMs)}</b> worked today</div>
           </div>
-          <div class="runway-need ${needClass}">${needHtml}</div>
+          <div class="runway-aside">
+            <div class="runway-need ${needClass}">${needHtml}</div>
+            ${treeHtml('xs')}
+          </div>
         </div>
         ${timelineInner ? `<div class="runway-day">${timelineInner}</div>` : ''}
         ${caption ? `<div class="runway-day-caption"><span>${captionLead}</span><span>${caption}</span></div>` : ''}
         <div class="runway-bar-label">${barLabel}</div>
         <div class="runway-bar"><div class="runway-need-fill calm" style="width:${bar.pct}%"></div>${bar.floorPct > 0 ? `<div class="runway-bar-secured" style="width:${bar.floorPct}%"></div>` : ''}</div>
-        <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(todayMs)} today &middot; ${formatTime(weekMs)} this week</div>`;
+        <div class="runway-eyebrow" style="margin-top:0.75rem">${formatTime(weekMs)} this week</div>`;
     };
 
     // Lane ordering (most behind first, ungrouped last) + a single lane row's
@@ -1703,11 +1709,6 @@
           : `<div class="streak-tree-cap">a steady grove grows here</div>`;
       }
       return `<div class="streak-tree streak-tree--${size}" role="img" aria-label="${label}">${streakTreeSvg(st)}${cap}</div>`;
-    };
-
-    const renderTreeSmall = () => {
-      const el = document.getElementById('td-tree-sm');
-      if (el) el.innerHTML = treeHtml('sm');
     };
 
     // --- FOCUS: Engine ---
