@@ -35,14 +35,13 @@ const SHOTS = [
   // active view to localStorage, which the next shot would otherwise inherit.
   { name: '11-on-a-break',      scenario: 'idle',            at: '14:45', h: 620, desc: 'On a Break — between blocks; next block preview + prev-block closure' },
   { name: '12-idle-afternoon',  scenario: 'idle',            at: '17:30', h: 780, desc: 'Launchpad — the soft afternoon block; calmer, no squeeze' },
-  // Streak tree growth stages, shown big on the Day Complete view (?tree= reshapes history).
-  { name: '13-tree-sprout',      scenario: 'idle', tree: 'sprout',      at: '21:00', h: 920, desc: 'Tree — sprout, a 2-day streak just taking root' },
-  { name: '14-tree-sapling',     scenario: 'idle', tree: 'sapling',     at: '21:00', h: 920, desc: 'Tree — sapling, a steady 5-day streak' },
-  { name: '15-tree-growing',     scenario: 'idle', tree: 'growing',     at: '21:00', h: 920, desc: 'Tree — growing, two weeks in and branching out' },
-  { name: '16-tree-flourishing', scenario: 'idle', tree: 'flourishing', at: '21:00', h: 920, desc: 'Tree — flourishing, a long streak in full bloom' },
-  { name: '17-tree-dimmed',      scenario: 'idle', tree: 'dimmed',      at: '21:00', h: 920, desc: 'Tree — streak broken: canopy dims to its floor, structure persists' },
-  { name: '18-tree-sprout-small', scenario: 'idle', tree: 'sprout',     at: '10:00', h: 780, desc: 'Tree (small) — sprout on the Launchpad' },
-  { name: '19-tree-flourishing-small', scenario: 'idle', tree: 'flourishing', at: '10:00', h: 780, desc: 'Tree (small) — flourishing on the Launchpad' },
+  // Streak tree growth arc — nothing to fully maxed, shown big on Day Complete.
+  { name: '13-tree-0-empty', scenario: 'idle', tree: 'seed',  at: '21:00', h: 920, desc: 'Tree — nothing planted yet' },
+  { name: '14-tree-1-day1',  scenario: 'idle', tree: 'day1',  at: '21:00', h: 920, desc: 'Tree — day one, a first sprout' },
+  { name: '15-tree-2-day3',  scenario: 'idle', tree: 'day3',  at: '21:00', h: 920, desc: 'Tree — a 3-day streak taking root' },
+  { name: '16-tree-3-day6',  scenario: 'idle', tree: 'day6',  at: '21:00', h: 920, desc: 'Tree — a 6-day streak branching out' },
+  { name: '17-tree-4-day10', scenario: 'idle', tree: 'day10', at: '21:00', h: 920, desc: 'Tree — a 10-day streak, nearly full' },
+  { name: '18-tree-5-max',   scenario: 'idle', tree: 'max',   at: '21:00', h: 920, desc: 'Tree — a long streak in full bloom (maxed)' },
   { name: '09-retrospective',   scenario: 'idle',            at: '10:00', h: 1500, tab: 'tab-retro', desc: 'Retrospective view' },
   { name: '10-settings',        scenario: 'idle',            at: '10:00', h: 760, tab: 'tab-settings', desc: 'Settings view — Work blocks + groups' },
 ];

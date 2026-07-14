@@ -3082,27 +3082,30 @@
             } }
         ];
 
-        // ?tree=STAGE overrides the day history to preview the streak tree at a
-        // given growth: sprout | sapling | growing | flourishing | dimmed. Each
-        // qualifying day logs 3h (above the 2h floor); 'dimmed' has a long history
-        // but the last two days missed — streak 0, so the canopy dims to its floor
-        // while the tree structure persists (shrink/dim, not reset).
+        // ?tree=STAGE overrides the day history to preview the streak tree's
+        // growth arc from nothing to fully maxed: seed | day1 | day3 | day6 |
+        // day10 | max (plus 'dimmed' — a long streak just broken, canopy dimmed
+        // to its floor while the structure persists). Each qualifying day logs 3h
+        // (above the 2h floor); 'seed' and 'dimmed' leave today unlogged.
         const treeStage = params.get('tree');
         if (treeStage) {
           const HIT = 10800000; // 3h — clears the 2h daily floor
           const runs = {
-            sprout:      [1],
-            sapling:     [1, 2, 3, 4],
-            growing:     Array.from({ length: 13 }, (_, i) => i + 1),
-            flourishing: Array.from({ length: 44 }, (_, i) => i + 1),
-            dimmed:      Array.from({ length: 43 }, (_, i) => i + 2) // today + yesterday missed
+            seed:   [],
+            day1:   [],
+            day3:   [1, 2],
+            day6:   [1, 2, 3, 4, 5],
+            day10:  [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            max:    Array.from({ length: 29 }, (_, i) => i + 1),
+            dimmed: Array.from({ length: 43 }, (_, i) => i + 2) // today + yesterday missed
           };
           const hits = runs[treeStage] || [];
+          const todayLogged = treeStage !== 'seed' && treeStage !== 'dimmed';
           const tsd = {};
           hits.forEach(o => { tsd[d(o)] = HIT; });
           cachedTasks = [
             { id: "c-today", parentId: null, title: "Build the Hack CPU emulator", isDone: false, projectId: "p1",
-              timeSpentOnDay: treeStage === 'dimmed' ? {} : { [d(0)]: HIT } },
+              timeSpentOnDay: todayLogged ? { [d(0)]: HIT } : {} },
             { id: "hist", parentId: null, title: "Session history", isDone: false, projectId: "p1", timeSpentOnDay: tsd }
           ];
         }
