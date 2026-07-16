@@ -1,6 +1,6 @@
 // 1. Register a button in the main app header to open your UI
 // PluginAPI.registerHeaderButton({
-//   label: 'Date Range Reporter',
+//   label: 'Progress Dashboard',
 //   icon: 'bar_chart',
 //   onClick: () => {
 //     // This command renders your index.html inside the main view iframe
@@ -8,7 +8,7 @@
 //   },
 // });
 
-console.log("[sp-dashboard plugin] Date Range Reporter plugin loaded!");
+console.log("[sp-dashboard plugin] Progress Dashboard plugin loaded!");
 
 // Register a keyboard shortcut to open the dashboard. This only *names* the
 // shortcut; the user assigns the actual key combination in Super Productivity's

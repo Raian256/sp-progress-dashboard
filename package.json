@@ -1,7 +1,7 @@
 {
-  "name": "sp-dashboard",
-  "version": "1.0.1",
-  "description": "A visual dashboard plugin providing metrics, charts, and daily summaries of your tasks and tracked time.",
+  "name": "sp-progress-dashboard",
+  "version": "0.1.0",
+  "description": "A calm, executive-function-friendly (ADHD/autism) instrument for Super Productivity — makes steady progress across your projects legible at a glance and rewards the hours you put in, day after day.",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -25,7 +25,7 @@
     "plugin",
     "dashboard"
   ],
-  "author": "Super Productivity Community",
+  "author": "Raian256",
   "license": "MIT",
   "dependencies": {
     "acorn": "^8.16.0"

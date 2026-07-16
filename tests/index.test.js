@@ -6,7 +6,7 @@ import { resolve } from 'path';
 // file moved into the sp-dashboard subdirectory
 const html = readFileSync(resolve(__dirname, '../sp-dashboard/index.html'), 'utf8');
 
-describe('Date Range Reporter UI', () => {
+describe('Progress Dashboard UI', () => {
   let scriptContent;
 
   // Pin the clock to an active-block hour (today 10:00, inside the default

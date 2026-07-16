@@ -1,11 +1,11 @@
 {
   "id": "sp-dashboard",
-  "name": "Dashboard",
+  "name": "Progress Dashboard",
   "version": "{{VERSION}}",
   "description": "{{DESCRIPTION}}",
   "manifestVersion": 1,
   "minSupVersion": "14.0.0",
-  "author": "Douglas Cooper",
+  "author": "Raian256",
   "icon": "icon.svg",
   "iFrame": true,
   "sidePanel": false,
