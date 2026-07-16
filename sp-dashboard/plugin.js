@@ -10,6 +10,23 @@
 
 console.log("[sp-dashboard plugin] Date Range Reporter plugin loaded!");
 
+// Register a keyboard shortcut to open the dashboard. This only *names* the
+// shortcut; the user assigns the actual key combination in Super Productivity's
+// Keyboard settings page, where it appears as "Open Dashboard". `showIndexHtmlAsView`
+// renders this plugin's index.html inside the host's main view. Guarded so older
+// SP builds that lack `registerShortcut` still load the plugin cleanly.
+try {
+  if (typeof PluginAPI.registerShortcut === 'function') {
+    PluginAPI.registerShortcut({
+      id: 'openDashboard',
+      label: 'Open Dashboard',
+      onExec: () => PluginAPI.showIndexHtmlAsView(),
+    });
+  }
+} catch (err) {
+  console.warn("[sp-dashboard plugin] registerShortcut unavailable:", err);
+}
+
 // We listen to the global Redux ACTION hook.
 // Whenever the user adds a task, tracks time, or changes a project, this fires.
 // Post a message to our plugin iframe(s). `payload.type` distinguishes the kind.
