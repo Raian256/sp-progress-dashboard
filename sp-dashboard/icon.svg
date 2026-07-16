@@ -1,31 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#03a9f4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <!-- 
-    Date Range Reporter Plugin Icon
-    
-    This design combines a calendar aesthetic with data visualization.
-    Geometry Overview:
-    - Outer frame: Defines the date range context.
-    - Header line: At Y=10, separating the calendar title area from the data area.
-    - Plot path: Constrained between Y=12 and Y=20 to prevent intersection.
-  -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
+  <!--
+    Dashboard Plugin Icon
 
-  <!-- Calendar Container Frame -->
-  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-  
-  <!-- Calendar Mounting Rings (Top Handles) -->
-  <line x1="16" y1="2" x2="16" y2="6"></line>
-  <line x1="8" y1="2" x2="8" y2="6"></line>
-  
-  <!-- Internal Horizontal Header Line -->
-  <line x1="3" y1="10" x2="21" y2="10"></line>
-  
-  <!-- Reporter Line Chart Trend Path -->
-  <!-- Shifted vertically to maintain clear whitespace from the header and footer lines -->
-  <path d="M6 19l4-3l4 2l4-5"></path>
-  
-  <!-- Interactive Data Points (Visual enhancements for metrics) -->
-  <circle cx="6" cy="19" r="1" fill="#03a9f4" stroke="none"></circle>
-  <circle cx="10" cy="16" r="1" fill="#03a9f4" stroke="none"></circle>
-  <circle cx="14" cy="18" r="1" fill="#03a9f4" stroke="none"></circle>
-  <circle cx="18" cy="13" r="1" fill="#03a9f4" stroke="none"></circle>
+    Native to Super Productivity's Material iconography: the canonical
+    "dashboard" glyph (a four-panel grid). Drawn with fill="currentColor"
+    and no hard-coded colour, so SP's plugin-icon component (which forces
+    `fill: currentColor` on the inlined SVG) tints it with the theme's icon
+    colour — dark on light themes, light on dark — matching the built-in
+    nav icons instead of standing out. Avoid stroke-based shapes here: SP
+    only overrides fill, so a hard-coded stroke would ignore the theme.
+  -->
+  <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path>
 </svg>
