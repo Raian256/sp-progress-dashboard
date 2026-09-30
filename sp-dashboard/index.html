@@ -483,8 +483,10 @@
     .focus-goalline { font-size: 0.9rem; color: var(--td-muted); }
     .focus-countdown { margin-top: 0.6rem; font-size: 1.1rem; font-weight: 700; color: var(--focus-color); }
     .focus-countdown.met { color: var(--td-go); }
-    .focus-depth { margin-top: 0.4rem; font-size: 0.85rem; color: var(--td-muted); }
-    .focus-depth b { color: var(--td-ink); font-weight: 600; }
+    .focus-floor-tick { stroke: var(--td-ink); stroke-width: 3; stroke-linecap: round; opacity: 0.5; }
+    .focus-floor-tick.met { stroke: var(--td-go); opacity: 0.9; }
+    .focus-floor { margin-top: 0.3rem; font-size: 0.85rem; color: var(--td-muted); }
+    .focus-floor.met { color: var(--td-go); }
     .focus-runway { margin-top: 0.15rem; font-size: 0.8rem; color: var(--td-muted); opacity: 0.85; }
     .focus-day { position: relative; width: min(220px, 55%); height: 5px; margin: 0.4rem auto 0; opacity: 0.85; }
     .focus-day .tl-seg { border-radius: 3px; }
@@ -1736,7 +1738,12 @@
       el.style.setProperty('--focus-color', color);
       // Ungrouped: reflect just the tracked project's time today, not the global total.
       const projTodayMs = (metrics.projectTodayData && metrics.projectTodayData[projName]) || 0;
+      // The streak floor is measured on the whole day's total (all lanes), so track
+      // that separately from this lane's ring — see dayHistory().
+      const hist = dayHistory();
       focusState = {
+        baseDayMs: hist.dayTotals[toLocalDateStr(new Date())] || 0,
+        floorMs: hist.floorMs,
         baseTodayMs: group ? group.todayMs : projTodayMs,
         goalMs: group ? group.dailyGoalMs : 0,
         groupName: group ? group.name : (res.isUngrouped ? 'this project' : 'this lane'),
@@ -1749,6 +1756,7 @@
           <svg class="focus-ring" viewBox="0 0 240 240">
             <circle class="focus-ring-track" cx="120" cy="120" r="106"></circle>
             <circle class="focus-ring-fill" id="focus-ring-fill" cx="120" cy="120" r="106"></circle>
+            <line class="focus-floor-tick" id="focus-floor-tick" style="display:none"></line>
           </svg>
           <div class="focus-ring-center">
             <div class="focus-big" id="focus-big"></div>
@@ -1756,7 +1764,7 @@
           </div>
         </div>
         <div class="focus-countdown" id="focus-countdown"></div>
-        <div class="focus-depth" id="focus-depth"></div>
+        <div class="focus-floor" id="focus-floor"></div>
         <div class="focus-runway" id="focus-runway"></div>
         <div class="focus-day" id="focus-day"></div>
         ${renderFocusOthers(stats, res.groupId)}`;
@@ -1777,7 +1785,6 @@
       const bigEl = document.getElementById('focus-big');
       const goalEl = document.getElementById('focus-goalline');
       const cdEl = document.getElementById('focus-countdown');
-      const depthEl = document.getElementById('focus-depth');
       if (goalMs > 0) {
         bigEl.textContent = Math.round(pct * 100) + '%';
         goalEl.textContent = `${formatTime(todayMs)} / ${formatGoalH(goalMs / 3600000)}`;
@@ -1795,7 +1802,29 @@
         cdEl.textContent = 'No daily goal on this lane';
         cdEl.className = 'focus-countdown';
       }
-      depthEl.innerHTML = focusSessionStart ? `This session: <b>${formatTime(Date.now() - focusSessionStart)}</b>` : '';
+      // Streak floor: a tick on the ring where this lane's time would carry the day's
+      // total past the floor (drawn only when that point lands on this lane's ring),
+      // plus a quiet line with the remaining time. The tick stays once earned.
+      const dayMs = focusState.baseDayMs + extra;
+      const floorMs = focusState.floorMs;
+      const floorMet = dayMs >= floorMs;
+      const floorEl = document.getElementById('focus-floor');
+      floorEl.textContent = floorMet ? 'Day counts toward your streak ✓' : `Day counts in ${formatTime(floorMs - dayMs)}`;
+      floorEl.className = floorMet ? 'focus-floor met' : 'focus-floor';
+      const tickEl = document.getElementById('focus-floor-tick');
+      const laneAtFloor = focusState.baseTodayMs + floorMs - focusState.baseDayMs;
+      const tickFrac = goalMs > 0 ? laneAtFloor / goalMs : 0;
+      if (tickFrac > 0 && tickFrac < 1) {
+        const a = 2 * Math.PI * tickFrac;
+        const pt = (r) => [(120 + r * Math.cos(a)).toFixed(1), (120 + r * Math.sin(a)).toFixed(1)];
+        const [x1, y1] = pt(96), [x2, y2] = pt(124);
+        tickEl.setAttribute('x1', x1); tickEl.setAttribute('y1', y1);
+        tickEl.setAttribute('x2', x2); tickEl.setAttribute('y2', y2);
+        tickEl.setAttribute('class', floorMet ? 'focus-floor-tick met' : 'focus-floor-tick');
+        tickEl.style.display = '';
+      } else {
+        tickEl.style.display = 'none';
+      }
       const runwayEl = document.getElementById('focus-runway');
       if (runwayEl) {
         const now = new Date();
