@@ -317,8 +317,8 @@ describe('Progress Dashboard UI', () => {
       const ds = (o) => { const d = new Date(); d.setDate(d.getDate() - o); return window.toLocalDateStr(d); };
       const tsd = { [ds(0)]: 3600000, [ds(1)]: 3600000 }; // 1h today + 1h yesterday
       const build = () => {
-        window.saveGroups([{ id: 'g', name: 'G', weeklyGoalH: 14, dailyGoalH: 2, projectIds: [], color: '#9ece6a' }]);
-        window.processData([{ id: 'h', parentId: null, title: 'h', isDone: false, timeSpentOnDay: tsd }], []);
+        window.saveGroups([{ id: 'g', name: 'G', weeklyGoalH: 14, dailyGoalH: 2, projectIds: ['p'], color: '#9ece6a' }]);
+        window.processData([{ id: 'h', parentId: null, title: 'h', isDone: false, projectId: 'p', timeSpentOnDay: tsd }], [{ id: 'p', title: 'P' }]);
       };
       localStorage.clear();
       localStorage.setItem('sp-dashboard-day-floor-frac', '0.3'); // floor 0.6h — 1h counts
@@ -327,6 +327,79 @@ describe('Progress Dashboard UI', () => {
       localStorage.setItem('sp-dashboard-day-floor-frac', '0.6'); // floor 1.2h — 1h misses
       build();
       expect(window.computeTreeState().streak).toBe(0);
+    });
+
+    it('a day counts only when every lane clears its share, not on the total', () => {
+      const ds = (o) => { const d = new Date(); d.setDate(d.getDate() - o); return window.toLocalDateStr(d); };
+      localStorage.clear();
+      localStorage.setItem('sp-dashboard-day-floor-frac', '0.5'); // floors: A 1h, B 0.5h
+      window.saveGroups([
+        { id: 'a', name: 'A', weeklyGoalH: 14, dailyGoalH: 2, projectIds: ['pa'], color: '#9ece6a' },
+        { id: 'b', name: 'B', weeklyGoalH: 7, dailyGoalH: 1, projectIds: ['pb'], color: '#7aa2f7' },
+      ]);
+      const projects = [{ id: 'pa', title: 'PA' }, { id: 'pb', title: 'PB' }];
+      // Yesterday: 3h on A alone (well past the 1.5h total floor) but B untouched -> miss.
+      // Day before: both lanes over their share -> hit.
+      window.processData([
+        { id: 'ta', parentId: null, title: 'a', isDone: false, projectId: 'pa', timeSpentOnDay: { [ds(1)]: 3 * 3600000, [ds(2)]: 3600000 } },
+        { id: 'tb', parentId: null, title: 'b', isDone: false, projectId: 'pb', timeSpentOnDay: { [ds(2)]: 30 * 60000 } },
+      ], projects);
+      expect(window.computeTreeState().streak).toBe(0);
+      expect(window.computeMomentum({}).label).toContain("50% of every lane's goal");
+    });
+
+    it('computeDayFloor gates per lane and falls back to 30m total with no lane goals', () => {
+      const lanes = [{ id: 'a', dailyGoalMs: 2 * 3600000 }, { id: 'b', dailyGoalMs: 3600000 }, { id: 'c', dailyGoalMs: 0 }];
+      const miss = window.computeDayFloor({ a: 3 * 3600000, b: 10 * 60000 }, lanes, 0.5, 0);
+      expect(miss.met).toBe(false);
+      expect(miss.remainingMs).toBe(20 * 60000);              // only B's shortfall
+      expect(miss.creditMs).toBe(3600000 + 10 * 60000);       // A capped at its 1h share
+      expect(miss.lanes.map(r => r.id)).toEqual(['a', 'b']);  // goal-less lanes don't gate
+      expect(window.computeDayFloor({ a: 3600000, b: 30 * 60000 }, lanes, 0.5, 0).met).toBe(true);
+      const none = window.computeDayFloor({}, [], 0.5, 45 * 60000);
+      expect(none.met).toBe(true);
+      expect(none.floorMs).toBe(30 * 60000);
+    });
+
+    it('computeGoalBar stays in the floor stage until every lane is in', () => {
+      const goal = 3 * 3600000;
+      const df = window.computeDayFloor({ a: 2 * 3600000, b: 0 }, [{ id: 'a', dailyGoalMs: 2 * 3600000 }, { id: 'b', dailyGoalMs: 3600000 }], 0.5, 2 * 3600000);
+      const bar = window.computeGoalBar(2 * 3600000, goal, 0.5, df); // total 2h > 1.5h floor
+      expect(bar.stage).toBe('floor');
+      expect(bar.floorMet).toBe(false);
+      expect(bar.pct).toBeCloseTo((3600000 / (1.5 * 3600000)) * 100, 5);
+    });
+
+    it('computeLaneReview gives each lane its own active days, steadiness and 4-week trend', () => {
+      const dates = ['2026-09-21', '2026-09-22', '2026-09-23'];
+      const dayLanes = {
+        '2026-09-21': { a: 3600000, b: 10 * 60000 },
+        '2026-09-22': { a: 3600000 },
+        '2026-09-23': { a: 3600000, b: 2 * 3600000 },
+        '2026-09-14': { a: 2 * 3600000 },
+      };
+      const groups = [
+        { id: 'a', name: 'A', dailyGoalH: 2 },   // share at 0.5 = 1h
+        { id: 'b', name: 'B', dailyGoalH: 0 },   // no goal: any time counts
+      ];
+      const ranges = [['2026-08-31'], ['2026-09-07'], ['2026-09-14'], dates];
+      const [a, b] = window.computeLaneReview(groups, dayLanes, dates, ranges, 0.5);
+      expect(a.activeDays).toBe(3);
+      expect(a.steadiness).toBe(100);
+      expect(a.weekTotals).toEqual([0, 0, 2 * 3600000, 3 * 3600000]);
+      expect(b.activeDays).toBe(2);
+      expect(b.steadiness).toBeLessThan(100);
+      expect(window.steadinessOf([0, 0, 0])).toBeNull(); // no time: no steadiness claim
+    });
+
+    it('the weekly review renders a per-lane breakdown', () => {
+      localStorage.clear();
+      window.saveGroups([{ id: 'g', name: 'Lane One', weeklyGoalH: 7, dailyGoalH: 1, projectIds: ['p'], color: '#9ece6a' }]);
+      window.processData([{ id: 't', parentId: null, title: 't', isDone: false, projectId: 'p',
+        timeSpentOnDay: { [window.toLocalDateStr(new Date())]: 3600000 } }], [{ id: 'p', title: 'P' }]);
+      const html = document.getElementById('weekly-review').innerHTML;
+      expect(html).toContain('By lane');
+      expect(html).toContain('Lane One');
     });
 
     it('renders a recursive SVG tree via treeHtml', () => {
