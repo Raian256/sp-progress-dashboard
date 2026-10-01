@@ -7,6 +7,9 @@ ZIP_FILE = $(PROJECT).zip
 VERSION := $(shell grep '"version"' package.json | sed 's/.*"version": "\(.*\)".*/\1/')
 DESCRIPTION := $(shell grep '"description"' package.json | sed 's/.*"description": "\(.*\)".*/\1/')
 RELEASE_FILE = $(PROJECT)-v$(VERSION).zip
+# Build stamp shown in SP's plugin list, e.g. 0.1.0+20261001.1432 (semver build metadata)
+BUILD_DATE := $(shell date +%Y%m%d.%H%M)
+BUILD_VERSION = $(VERSION)+$(BUILD_DATE)
 
 .PHONY: build clean help release release-check test
 
@@ -17,7 +20,8 @@ build: clean
 	@mkdir -p build/$(PLUGIN_DIR)
 	@cp -R $(PLUGIN_DIR)/* build/$(PLUGIN_DIR)/
 	@echo "Generating manifest.json from template..."
-	@VERSION="$(VERSION)" DESCRIPTION="$(DESCRIPTION)" sh -c '\
+	@echo "Version: $(BUILD_VERSION)"
+	@VERSION="$(BUILD_VERSION)" DESCRIPTION="$(DESCRIPTION)" sh -c '\
 		sed -e "s/{{VERSION}}/$$VERSION/g" -e "s|{{DESCRIPTION}}|$$DESCRIPTION|g" \
 		$(PLUGIN_DIR)/manifest.json.template > build/$(PLUGIN_DIR)/manifest.json'
 	@rm -f build/$(PLUGIN_DIR)/manifest.json.template
