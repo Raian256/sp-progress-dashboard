@@ -10,6 +10,8 @@ RELEASE_FILE = $(PROJECT)-v$(VERSION).zip
 # Build stamp shown in SP's plugin list, e.g. 0.1.0+20261001.1432 (semver build metadata)
 BUILD_DATE := $(shell date +%Y%m%d.%H%M)
 BUILD_VERSION = $(VERSION)+$(BUILD_DATE)
+# The host caps index.html at 100KB; build warns if the minified file exceeds it
+MAX_HTML_BYTES = 100000
 
 .PHONY: build clean help release release-check test
 
@@ -27,6 +29,14 @@ build: clean
 	@rm -f build/$(PLUGIN_DIR)/manifest.json.template
 	@echo "Minifying HTML (inline CSS/JS preserved) -> build/$(PLUGIN_DIR)/index.html"
 	@npm run build:min
+	@SIZE=$$(wc -c < build/$(PLUGIN_DIR)/index.html); \
+	KB=$$(awk "BEGIN{printf \"%.1f\", $$SIZE/1000}"); \
+	LIMIT_KB=$$(awk "BEGIN{printf \"%.1f\", $(MAX_HTML_BYTES)/1000}"); \
+	if [ $$SIZE -gt $(MAX_HTML_BYTES) ]; then \
+		echo "⚠️  Warning: minified index.html is $$KB KB (host limit $$LIMIT_KB KB)"; \
+	else \
+		echo "✓ Minified index.html is $$KB KB (limit $$LIMIT_KB KB)"; \
+	fi
 	@cd build/$(PLUGIN_DIR) && zip -r ../../$(ZIP_FILE) . -x "manifest.json.template"
 	@echo "✓ Plugin packaged successfully: $(ZIP_FILE)"
 
