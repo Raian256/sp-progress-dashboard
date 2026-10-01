@@ -326,7 +326,59 @@ describe('Progress Dashboard UI', () => {
       expect(window.computeTreeState().streak).toBe(2);
       localStorage.setItem('sp-dashboard-day-floor-frac', '0.6'); // floor 1.2h — 1h misses
       build();
+      // Raised today: today misses (unfinished, not a break) but yesterday keeps its hit.
+      expect(window.computeTreeState().streak).toBe(1);
+      localStorage.clear();                                       // judged at 0.6 from the start
+      localStorage.setItem('sp-dashboard-day-floor-frac', '0.6');
+      build();
       expect(window.computeTreeState().streak).toBe(0);
+    });
+
+    describe('goal changes never rewrite past days', () => {
+      const ds = (o) => { const d = new Date(); d.setDate(d.getDate() - o); return window.toLocalDateStr(d); };
+      const laneA = { id: 'a', name: 'A', weeklyGoalH: 14, dailyGoalH: 2, projectIds: ['pa'], color: '#9ece6a' };
+      const projects = [{ id: 'pa', title: 'PA' }, { id: 'pb', title: 'PB' }];
+      // 1h/day on A for the past 5 days (floor at 30% of 2h = 0.6h) -> 5-day streak.
+      const tasks = () => [{ id: 'ta', parentId: null, title: 'a', isDone: false, projectId: 'pa',
+        timeSpentOnDay: Object.fromEntries([1, 2, 3, 4, 5].map(o => [ds(o), 3600000])) }];
+      const setup = () => {
+        localStorage.clear();
+        window.saveGroups([laneA]);
+        window.processData(tasks(), projects);
+        expect(window.computeTreeState().streak).toBe(5);
+      };
+
+      it('adding a new lane keeps the earned streak', () => {
+        setup();
+        window.saveGroups([laneA, { id: 'b', name: 'B', weeklyGoalH: 7, dailyGoalH: 1, projectIds: ['pb'], color: '#7aa2f7' }]);
+        window.processData(tasks(), projects);
+        expect(window.computeTreeState().streak).toBe(5);
+        expect(window.computeTreeState().g).toBeGreaterThan(0.7);
+      });
+
+      it('raising a lane goal keeps the earned streak', () => {
+        setup();
+        window.saveGroups([{ ...laneA, dailyGoalH: 8 }]);   // floor now 2.4h — past 1h days would fail
+        window.processData(tasks(), projects);
+        expect(window.computeTreeState().streak).toBe(5);
+        const ws = [1, 2, 3, 4, 5].map(ds);
+        const [row] = window.computeLaneReview([{ ...laneA, dailyGoalH: 8 }], { [ws[0]]: { a: 3600000 } }, ws, [ws], 0.3,
+          () => ({ goalMs: 2 * 3600000, frac: 0.3 }));
+        expect(row.activeDays).toBe(1);
+      });
+
+      it('records changes from today and collapses a same-day revert', () => {
+        const c1 = { frac: 0.3, lanes: [{ id: 'a', dailyGoalMs: 1, projectIds: [] }] };
+        const c2 = { frac: 0.3, lanes: [{ id: 'a', dailyGoalMs: 2, projectIds: [] }] };
+        let h = window.recordGoalConfig([], c1, '2026-10-01');
+        expect(h).toEqual([{ from: '', ...c1 }]);
+        h = window.recordGoalConfig(h, c2, '2026-10-01');
+        expect(h.map(e => e.from)).toEqual(['', '2026-10-01']);
+        expect(window.goalConfigOn(h, '2026-09-30').lanes[0].dailyGoalMs).toBe(1);
+        expect(window.goalConfigOn(h, '2026-10-01').lanes[0].dailyGoalMs).toBe(2);
+        h = window.recordGoalConfig(h, c1, '2026-10-01');   // reverted same day
+        expect(h).toEqual([{ from: '', ...c1 }]);
+      });
     });
 
     it('a day counts only when every lane clears its share, not on the total', () => {

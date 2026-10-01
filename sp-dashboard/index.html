@@ -1616,28 +1616,83 @@
     // break the streak (it's unfinished).
     // Per-day totals (overall and per lane) + a `floorOn(dateStr)` verdict.
     // Single-sourced so the momentum strip, the streak tree and the goal bar never drift.
+    // The streak criterion (lanes, their daily goals and projects, the floor fraction)
+    // is versioned by date so a past day is always judged by the rules in effect that
+    // day: adding a lane or raising a goal applies from today on and never retroactively
+    // breaks earned streaks. Stored as [{ from: 'YYYY-MM-DD', frac, lanes }] ascending;
+    // the first entry has from '' (covers all history before tracking began).
+    const GOAL_HISTORY_KEY = 'sp-dashboard-goal-history';
+    const currentGoalConfig = () => ({
+      frac: getDayFloorFrac(),
+      lanes: loadGroups().map(g => ({
+        id: g.id, dailyGoalMs: (parseFloat(g.dailyGoalH) || 0) * 3600000, projectIds: [...(g.projectIds || [])],
+      })),
+    });
+    const loadGoalHistory = () => {
+      try {
+        const h = JSON.parse(localStorage.getItem(GOAL_HISTORY_KEY) || '[]');
+        return Array.isArray(h) ? h.filter(e => e && typeof e.from === 'string' && Array.isArray(e.lanes)) : [];
+      } catch { return []; }
+    };
+    // Pure: fold the current config into the history as of `todayStr`. A change made
+    // today replaces today's entry (and collapses back if it reverts to yesterday's).
+    const recordGoalConfig = (hist, cfg, todayStr) => {
+      const sig = (c) => JSON.stringify([c.frac, c.lanes]);
+      const out = hist.slice();
+      if (!out.length) return [{ from: '', ...cfg }];
+      const last = out[out.length - 1];
+      if (sig(last) === sig(cfg)) return out;
+      if (last.from === todayStr) out.pop();
+      const prev = out[out.length - 1];
+      if (!prev || sig(prev) !== sig(cfg)) out.push({ from: todayStr, ...cfg });
+      return out.length ? out : [{ from: '', ...cfg }];
+    };
+    // Pure: the config in effect on `ds` (latest entry whose `from` <= ds).
+    const goalConfigOn = (hist, ds) => {
+      let cfg = hist[0];
+      for (const e of hist) { if (e.from <= ds) cfg = e; else break; }
+      return cfg;
+    };
+
     const dayHistory = () => {
-      // A project belongs to the first group that claims it (as in computeGroupStats).
       const visible = new Set(cachedProjects.filter(p => !p.isHiddenFromMenu).map(p => p.id));
-      const groupOf = {};
-      const lanes = loadGroups().map(g => {
-        (g.projectIds || []).forEach(id => { if (visible.has(id) && !(id in groupOf)) groupOf[id] = g.id; });
-        return { id: g.id, dailyGoalMs: (parseFloat(g.dailyGoalH) || 0) * 3600000 };
-      });
+      const todayStr = toLocalDateStr(new Date());
+      const cur = currentGoalConfig();
+      const prior = loadGoalHistory();
+      const history = recordGoalConfig(prior, cur, todayStr);
+      if (JSON.stringify(history) !== JSON.stringify(prior)) {
+        try { localStorage.setItem(GOAL_HISTORY_KEY, JSON.stringify(history)); } catch {}
+      }
+      // A project belongs to the first lane that claims it (as in computeGroupStats),
+      // under the lane layout in effect on that day.
+      const groupOfCache = new Map();
+      const groupOfFor = (cfg) => {
+        if (!groupOfCache.has(cfg)) {
+          const m = {};
+          cfg.lanes.forEach(l => (l.projectIds || []).forEach(id => { if (visible.has(id) && !(id in m)) m[id] = l.id; }));
+          groupOfCache.set(cfg, m);
+        }
+        return groupOfCache.get(cfg);
+      };
+      const configOn = (ds) => (ds >= todayStr ? cur : goalConfigOn(history, ds));
       const dayTotals = {}, dayLanes = {};
       cachedTasks.forEach(t => {
-        const gid = t.projectId && groupOf[t.projectId];
         for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) {
           dayTotals[d] = (dayTotals[d] || 0) + ms;
+          const gid = t.projectId && groupOfFor(configOn(d))[t.projectId];
           if (gid) { const m = dayLanes[d] || (dayLanes[d] = {}); m[gid] = (m[gid] || 0) + ms; }
         }
       });
-      const frac = getDayFloorFrac();
-      const floorOn = (ds, laneOverride, totalOverride) => computeDayFloor(
-        laneOverride || dayLanes[ds] || {}, lanes, frac,
-        totalOverride != null ? totalOverride : (dayTotals[ds] || 0));
-      const floorMs = floorOn('').floorMs;
-      return { dayTotals, dayLanes, lanes, frac, floorMs, floorOn };
+      const { lanes, frac } = cur;
+      const floorOn = (ds, laneOverride, totalOverride) => {
+        const cfg = configOn(ds);
+        return computeDayFloor(laneOverride || dayLanes[ds] || {}, cfg.lanes, cfg.frac,
+          totalOverride != null ? totalOverride : (dayTotals[ds] || 0));
+      };
+      const floorMs = computeDayFloor({}, lanes, frac, 0).floorMs;
+      // Per-lane daily goal as it stood on `ds` (0 if the lane didn't exist then).
+      const laneGoalOn = (id, ds) => { const l = configOn(ds).lanes.find(x => x.id === id); return l ? l.dailyGoalMs : 0; };
+      return { dayTotals, dayLanes, lanes, frac, floorMs, floorOn, laneGoalOn, configOn };
     };
 
     // "a day counts at …" — a duration when there are no lane goals, else the share.
@@ -2331,12 +2386,18 @@
     // Pure: per-lane weekly review rows — active days (lane cleared `frac` of its
     // daily goal, or any time when it has none), steadiness over the working days,
     // and the lane's totals for each of the 4 week ranges (oldest -> current).
-    const computeLaneReview = (groups, dayLanes, workingDates, weekRanges, frac) =>
+    // `ruleOn(id, d)` optionally returns { goalMs, frac } as they stood on day `d`, so
+    // a goal raised (or lane added) later doesn't rewrite past lane-days.
+    const computeLaneReview = (groups, dayLanes, workingDates, weekRanges, frac, ruleOn) =>
       (groups || []).map(g => {
         const goalMs = (parseFloat(g.dailyGoalH) || 0) * 3600000;
         const msOn = (d) => (dayLanes[d] && dayLanes[d][g.id]) || 0;
         const daily = workingDates.map(msOn);
-        const activeDays = daily.filter(ms => ms > 0 && (goalMs <= 0 || ms >= goalMs * frac)).length;
+        const activeDays = workingDates.filter((d, i) => {
+          const ms = daily[i];
+          const r = ruleOn ? ruleOn(g.id, d) : { goalMs, frac };
+          return ms > 0 && (r.goalMs <= 0 || ms >= r.goalMs * r.frac);
+        }).length;
         return {
           id: g.id, name: g.name || 'Group', color: g.color,
           activeDays, steadiness: steadinessOf(daily),
@@ -2391,7 +2452,8 @@
       // active when that lane cleared its share of its own daily goal (or, with no
       // goal, had any time at all).
       const frac = hist.frac;
-      const laneRows = computeLaneReview(loadGroups(), hist.dayLanes, workingDates, weekRanges, frac);
+      const laneRows = computeLaneReview(loadGroups(), hist.dayLanes, workingDates, weekRanges, frac,
+        (id, d) => ({ goalMs: hist.laneGoalOn(id, d), frac: hist.configOn(d).frac }));
       const lanesHtml = laneRows.length ? `
         <div class="wr-lanes">
           <div class="wr-lanes-title">By lane</div>
@@ -3088,6 +3150,8 @@
     window.computeGoalBar = computeGoalBar;
     window.computeDayFloor = computeDayFloor;
     window.computeLaneReview = computeLaneReview;
+    window.recordGoalConfig = recordGoalConfig;
+    window.goalConfigOn = goalConfigOn;
     window.steadinessOf = steadinessOf;
     window.renderWeekInReview = renderWeekInReview;
     window.blockAtTime = blockAtTime;
