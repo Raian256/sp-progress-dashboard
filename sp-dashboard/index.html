@@ -94,6 +94,7 @@
     .collapsible-toggle.open .chevron { transform: rotate(90deg); }
     .collapsible-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
     .collapsible-body.open { max-height: 400px; }
+    .collapsible-body--tall.open { max-height: 4000px; }
 
     .stat-card, .chart-card {
       background: var(--bg, #121212);
@@ -148,6 +149,22 @@
     .wr-day { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 600; }
     .wr-day.studied { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
     .wr-day.missed { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    .wr-lanes { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--divider-color, #333); }
+    .wr-lanes-title { font-size: 0.7rem; color: var(--text-color-muted, #9e9e9e); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+    .wr-lane { display: grid; grid-template-columns: minmax(6rem, 1.2fr) 4.5rem 5rem 5.5rem minmax(9rem, 2fr); gap: 0.5rem; align-items: center; padding: 0.35rem 0; font-size: 0.8rem; }
+    .wr-lane + .wr-lane { border-top: 1px solid var(--divider-color, #333); }
+    .wr-lane-head { font-size: 0.65rem; color: var(--text-color-muted, #9e9e9e); text-transform: uppercase; letter-spacing: 0.03em; padding-top: 0; }
+    .wr-lane-name { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; min-width: 0; }
+    .wr-lane-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wr-lane-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+    .wr-lane-num { text-align: center; font-variant-numeric: tabular-nums; }
+    .wr-lane-trend { color: var(--text-color-muted, #9e9e9e); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wr-lane-trend b { color: var(--text-color, #fff); }
+    @media (max-width: 520px) {
+      .wr-lane { grid-template-columns: 1fr 3rem 4rem 4rem; }
+      .wr-lane-trend { grid-column: 1 / -1; padding-left: 1.2rem; }
+      .wr-lane-head .wr-lane-trend { display: none; }
+    }
     .wr-day.rest { background: rgba(158, 158, 158, 0.1); color: var(--text-color-muted, #9e9e9e); font-style: italic; }
 
     /* Chart Controls */
@@ -581,10 +598,12 @@
           <div class="group-empty" id="alloc-bar-empty">Set weekly goals in Manage Groups to see actual-vs-target balance.</div>
         </div>
 
-        <!-- All-time project hours -->
-        <div class="project-hours-section">
-          <h3 class="section-title">Total Hours per Project (All Time)</h3>
-          <div class="project-hours-grid" id="project-hours-grid"></div>
+        <!-- Collapsible all-time project hours -->
+        <button class="collapsible-toggle" id="project-hours-toggle">
+          <span class="chevron">&#9654;</span> Total Hours per Project (All Time)
+        </button>
+        <div class="collapsible-body collapsible-body--tall" id="project-hours-collapsible">
+          <div class="project-hours-grid" id="project-hours-grid" style="margin-top: 0.5rem;"></div>
         </div>
 
         <!-- Collapsible Time Tracked Chart -->
@@ -665,7 +684,7 @@
               </select>
             </div>
             <div class="setting-field">
-              <label for="day-floor-pct">A day counts at (% of daily goal)</label>
+              <label for="day-floor-pct">A day counts at (% of each lane's daily goal)</label>
               <input type="number" id="day-floor-pct" min="5" max="100" step="5">
             </div>
           </div>
@@ -838,6 +857,15 @@
       heatmapToggle.classList.toggle('open');
       localStorage.setItem('sp-dashboard-heatmap-open', isOpen ? '1' : '0');
       if (isOpen) renderHeatmap();
+    });
+
+    const projHoursToggle = document.getElementById('project-hours-toggle');
+    const projHoursBody = document.getElementById('project-hours-collapsible');
+    if (localStorage.getItem('sp-dashboard-project-hours-open') === '1') { projHoursToggle.classList.add('open'); projHoursBody.classList.add('open'); }
+    projHoursToggle.addEventListener('click', () => {
+      const isOpen = projHoursBody.classList.toggle('open');
+      projHoursToggle.classList.toggle('open');
+      localStorage.setItem('sp-dashboard-project-hours-open', isOpen ? '1' : '0');
     });
 
     // --- View tabs (Today / Retrospective / Settings) ---
@@ -1101,13 +1129,17 @@
     // to the full daily goal, and the floor it already earned stays drawn as a secured
     // segment rather than vanishing. `pct` is the live fill, `floorPct` the secured part
     // (0 until the floor is met, so nothing is promised before it's earned).
-    const computeGoalBar = (todayMs, dailyGoalMs, floorFrac) => {
+    // Optional `dayFloor` (a computeDayFloor result) gates the floor stage per lane:
+    // the floor fills by lane-capped credit and is only met once every lane is.
+    const computeGoalBar = (todayMs, dailyGoalMs, floorFrac, dayFloor) => {
       const goal = dailyGoalMs > 0 ? dailyGoalMs : 0;
       const today = Math.max(0, todayMs || 0);
       if (goal <= 0) return { stage: 'none', pct: 0, floorPct: 0, floorMs: 0, goalMs: 0, floorMet: false };
       const floorMs = goal * Math.min(Math.max(floorFrac, 0.05), 1);
-      if (today < floorMs) {
-        return { stage: 'floor', pct: Math.min((today / floorMs) * 100, 100), floorPct: 0, floorMs, goalMs: goal, floorMet: false };
+      const credit = dayFloor ? dayFloor.creditMs : today;
+      const floorMet = dayFloor ? dayFloor.met : today >= floorMs;
+      if (!floorMet) {
+        return { stage: 'floor', pct: Math.min((credit / floorMs) * 100, 100), floorPct: 0, floorMs, goalMs: goal, floorMet: false };
       }
       return {
         stage: 'goal',
@@ -1445,9 +1477,10 @@
       // The goal bar runs in two stages: fill the streak floor first, then the day's
       // goal (see computeGoalBar). The block/time pressure still lives in the big
       // number and status line, never in the bar.
-      const bar = computeGoalBar(todayMs, dailyGoalMs, getDayFloorFrac());
+      const hist = dayHistory();
+      const bar = computeGoalBar(todayMs, dailyGoalMs, getDayFloorFrac(), hist.floorOn(toLocalDateStr(now)));
       const barLabel = bar.stage === 'floor'
-        ? `Day counts at ${formatTime(bar.floorMs)}`
+        ? `Day counts at ${dayFloorPhrase(hist)}`
         : bar.floorMet
           ? `Today's goal <span class="runway-bar-ok">&middot; day counts</span>`
           : `Today's goal`;
@@ -1549,21 +1582,72 @@
       el.innerHTML = ordered.map(s => laneRowHtml(s, slippingId)).join('');
     };
 
-    // The 14-day momentum grid + streak, computed once so both the Launchpad and
-    // Day Complete render the same strip. A day "counts" at 1/3 the daily goal
-    // (or 30m if no goal); today's miss doesn't break the streak (it's unfinished).
-    // Per-day totals across all tasks + the daily floor a day must clear to "count".
-    // Single-sourced so the momentum strip and the streak tree never drift.
-    const dayHistory = () => {
-      const dayTotals = {};
-      cachedTasks.forEach(t => { for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms; });
-      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
-      const floorMs = dailyGoalMs > 0 ? dailyGoalMs * getDayFloorFrac() : 30 * 60000;
-      return { dayTotals, floorMs };
+    // Pure: does a day count toward the streak? Every lane with a daily goal must
+    // clear `frac` of its *own* goal — a strong lane can't carry a neglected one.
+    // With no lane goals set, the day counts at 30m total. `creditMs` is progress
+    // toward the floor with each lane capped at its share (drives the goal bar);
+    // `remainingMs` is the summed shortfall across lanes.
+    const NO_GOAL_FLOOR_MS = 30 * 60000;
+    const computeDayFloor = (laneMs, lanes, frac, totalMs) => {
+      const goalLanes = (lanes || []).filter(l => l.dailyGoalMs > 0);
+      if (!goalLanes.length) {
+        const t = Math.max(0, totalMs || 0);
+        return { floorMs: NO_GOAL_FLOOR_MS, creditMs: Math.min(t, NO_GOAL_FLOOR_MS),
+          remainingMs: Math.max(0, NO_GOAL_FLOOR_MS - t), met: t >= NO_GOAL_FLOOR_MS, lanes: [] };
+      }
+      const f = Math.min(Math.max(frac, 0.05), 1);
+      const rows = goalLanes.map(l => {
+        const ms = Math.max(0, (laneMs && laneMs[l.id]) || 0);
+        const floorMs = l.dailyGoalMs * f;
+        return { id: l.id, ms, floorMs, met: ms >= floorMs };
+      });
+      return {
+        floorMs: rows.reduce((a, r) => a + r.floorMs, 0),
+        creditMs: rows.reduce((a, r) => a + Math.min(r.ms, r.floorMs), 0),
+        remainingMs: rows.reduce((a, r) => a + Math.max(0, r.floorMs - r.ms), 0),
+        met: rows.every(r => r.met),
+        lanes: rows,
+      };
     };
 
+    // The 14-day momentum grid + streak, computed once so both the Launchpad and
+    // Day Complete render the same strip. A day "counts" when every lane clears the
+    // floor fraction of its daily goal (see computeDayFloor); today's miss doesn't
+    // break the streak (it's unfinished).
+    // Per-day totals (overall and per lane) + a `floorOn(dateStr)` verdict.
+    // Single-sourced so the momentum strip, the streak tree and the goal bar never drift.
+    const dayHistory = () => {
+      // A project belongs to the first group that claims it (as in computeGroupStats).
+      const visible = new Set(cachedProjects.filter(p => !p.isHiddenFromMenu).map(p => p.id));
+      const groupOf = {};
+      const lanes = loadGroups().map(g => {
+        (g.projectIds || []).forEach(id => { if (visible.has(id) && !(id in groupOf)) groupOf[id] = g.id; });
+        return { id: g.id, dailyGoalMs: (parseFloat(g.dailyGoalH) || 0) * 3600000 };
+      });
+      const dayTotals = {}, dayLanes = {};
+      cachedTasks.forEach(t => {
+        const gid = t.projectId && groupOf[t.projectId];
+        for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) {
+          dayTotals[d] = (dayTotals[d] || 0) + ms;
+          if (gid) { const m = dayLanes[d] || (dayLanes[d] = {}); m[gid] = (m[gid] || 0) + ms; }
+        }
+      });
+      const frac = getDayFloorFrac();
+      const floorOn = (ds, laneOverride, totalOverride) => computeDayFloor(
+        laneOverride || dayLanes[ds] || {}, lanes, frac,
+        totalOverride != null ? totalOverride : (dayTotals[ds] || 0));
+      const floorMs = floorOn('').floorMs;
+      return { dayTotals, dayLanes, lanes, frac, floorMs, floorOn };
+    };
+
+    // "a day counts at …" — a duration when there are no lane goals, else the share.
+    const dayFloorPhrase = (hist) => hist.lanes.some(l => l.dailyGoalMs > 0)
+      ? `${Math.round(hist.frac * 100)}% of every lane's goal`
+      : formatTime(hist.floorMs);
+
     const computeMomentum = (metrics) => {
-      const { dayTotals, floorMs } = dayHistory();
+      const hist = dayHistory();
+      const { dayTotals, floorMs } = hist;
       const today = new Date();
       const N = 14;
       const cells = [];
@@ -1571,12 +1655,12 @@
         const d = new Date(today); d.setDate(today.getDate() - i);
         const ds = toLocalDateStr(d);
         const ms = dayTotals[ds] || 0;
-        cells.push({ ds, ms, hit: ms >= floorMs, isToday: i === 0 });
+        cells.push({ ds, ms, hit: hist.floorOn(ds).met, isToday: i === 0 });
       }
       let streak = 0;
       for (let i = 0; i < 500; i++) {
         const d = new Date(today); d.setDate(today.getDate() - i);
-        const hit = (dayTotals[toLocalDateStr(d)] || 0) >= floorMs;
+        const hit = hist.floorOn(toLocalDateStr(d)).met;
         if (i === 0) { if (hit) streak++; }        // today unfinished: a miss doesn't break
         else if (hit) streak++; else break;
       }
@@ -1587,7 +1671,7 @@
       }).join('');
       const label = streak > 0
         ? `<b>${streak}</b>-day streak${todayHit ? '' : ' &middot; today not logged yet'}`
-        : `No streak yet &middot; a day counts at ${formatTime(floorMs)}`;
+        : `No streak yet &middot; a day counts at ${dayFloorPhrase(hist)}`;
       return { cellsHtml, label, streak, todayHit, floorMs };
     };
 
@@ -1611,11 +1695,12 @@
     //    "one more flower every N days" steps.
     const TREE_RISE = 0.28, TREE_FALL = 0.30, TREE_WINDOW = 180;
     const computeTreeState = () => {
-      const { dayTotals, floorMs } = dayHistory();
+      const hist = dayHistory();
+      const { floorMs } = hist;
       const today = new Date();
       const hitOn = (offset) => {
         const d = new Date(today); d.setDate(today.getDate() - offset);
-        return (dayTotals[toLocalDateStr(d)] || 0) >= floorMs;
+        return hist.floorOn(toLocalDateStr(d)).met;
       };
       let g = 0;
       // Walk oldest -> yesterday. Empty pre-history days are misses but leave g at 0.
@@ -1738,12 +1823,15 @@
       el.style.setProperty('--focus-color', color);
       // Ungrouped: reflect just the tracked project's time today, not the global total.
       const projTodayMs = (metrics.projectTodayData && metrics.projectTodayData[projName]) || 0;
-      // The streak floor is measured on the whole day's total (all lanes), so track
-      // that separately from this lane's ring — see dayHistory().
+      // The streak floor is judged per lane across the whole day (every lane must
+      // clear its share), so keep today's lane totals beside this lane's ring.
       const hist = dayHistory();
+      const todayStr = toLocalDateStr(new Date());
       focusState = {
-        baseDayMs: hist.dayTotals[toLocalDateStr(new Date())] || 0,
-        floorMs: hist.floorMs,
+        baseDayMs: hist.dayTotals[todayStr] || 0,
+        baseLaneMs: { ...(hist.dayLanes[todayStr] || {}) },
+        floorOn: hist.floorOn,
+        groupId: group && !group.isUngrouped ? group.id : null,
         baseTodayMs: group ? group.todayMs : projTodayMs,
         goalMs: group ? group.dailyGoalMs : 0,
         groupName: group ? group.name : (res.isUngrouped ? 'this project' : 'this lane'),
@@ -1802,25 +1890,32 @@
         cdEl.textContent = 'No daily goal on this lane';
         cdEl.className = 'focus-countdown';
       }
-      // Streak floor: a tick on the ring where this lane's time would carry the day's
-      // total past the floor (drawn only when that point lands on this lane's ring),
-      // plus a quiet line with the remaining time. The tick stays once earned.
+      // Streak floor: every lane must clear its share of its goal. A tick on the ring
+      // marks this lane's share, plus a quiet line with the summed remaining time
+      // across lanes. With no lane goals, the floor is the day's total and the tick
+      // sits where this lane's time would carry the day past it.
       const dayMs = focusState.baseDayMs + extra;
-      const floorMs = focusState.floorMs;
-      const floorMet = dayMs >= floorMs;
+      const laneMs = { ...focusState.baseLaneMs };
+      if (focusState.groupId) laneMs[focusState.groupId] = (laneMs[focusState.groupId] || 0) + extra;
+      const df = focusState.floorOn(toLocalDateStr(new Date()), laneMs, dayMs);
+      const floorMet = df.met;
+      const laneRow = df.lanes.find(r => r.id === focusState.groupId);
       const floorEl = document.getElementById('focus-floor');
-      floorEl.textContent = floorMet ? 'Day counts toward your streak ✓' : `Day counts in ${formatTime(floorMs - dayMs)}`;
+      floorEl.textContent = floorMet ? 'Day counts toward your streak ✓'
+        : laneRow && laneRow.met ? `This lane's share is in · day counts in ${formatTime(df.remainingMs)}`
+        : `Day counts in ${formatTime(df.remainingMs)}`;
       floorEl.className = floorMet ? 'focus-floor met' : 'focus-floor';
       const tickEl = document.getElementById('focus-floor-tick');
-      const laneAtFloor = focusState.baseTodayMs + floorMs - focusState.baseDayMs;
-      const tickFrac = goalMs > 0 ? laneAtFloor / goalMs : 0;
+      let tickFrac = 0, tickMet = floorMet;
+      if (laneRow) { tickFrac = laneRow.floorMs / goalMs; tickMet = laneRow.met; }
+      else if (!df.lanes.length && goalMs > 0) tickFrac = (focusState.baseTodayMs + df.floorMs - focusState.baseDayMs) / goalMs;
       if (tickFrac > 0 && tickFrac < 1) {
         const a = 2 * Math.PI * tickFrac;
         const pt = (r) => [(120 + r * Math.cos(a)).toFixed(1), (120 + r * Math.sin(a)).toFixed(1)];
         const [x1, y1] = pt(96), [x2, y2] = pt(124);
         tickEl.setAttribute('x1', x1); tickEl.setAttribute('y1', y1);
         tickEl.setAttribute('x2', x2); tickEl.setAttribute('y2', y2);
-        tickEl.setAttribute('class', floorMet ? 'focus-floor-tick met' : 'focus-floor-tick');
+        tickEl.setAttribute('class', tickMet ? 'focus-floor-tick met' : 'focus-floor-tick');
         tickEl.style.display = '';
       } else {
         tickEl.style.display = 'none';
@@ -2220,6 +2315,35 @@
 
     document.getElementById('run-diag-btn').addEventListener('click', renderDiagnostics);
 
+    // Pure: 0-100% evenness of a run of daily totals (100 = identical days), from the
+    // coefficient of variation normalised by its maximum for that many days.
+    // null when there's no time at all — nothing to be steady about.
+    const steadinessOf = (data) => {
+      const n = data.length || 1;
+      const mean = data.reduce((a, b) => a + b, 0) / n;
+      if (mean <= 0) return null;
+      const variance = data.reduce((a, v) => a + (v - mean) ** 2, 0) / n;
+      const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
+      const maxCv = Math.sqrt(Math.max(data.length - 1, 1));
+      return Math.round((1 - Math.min(cv / maxCv, 1)) * 100);
+    };
+
+    // Pure: per-lane weekly review rows — active days (lane cleared `frac` of its
+    // daily goal, or any time when it has none), steadiness over the working days,
+    // and the lane's totals for each of the 4 week ranges (oldest -> current).
+    const computeLaneReview = (groups, dayLanes, workingDates, weekRanges, frac) =>
+      (groups || []).map(g => {
+        const goalMs = (parseFloat(g.dailyGoalH) || 0) * 3600000;
+        const msOn = (d) => (dayLanes[d] && dayLanes[d][g.id]) || 0;
+        const daily = workingDates.map(msOn);
+        const activeDays = daily.filter(ms => ms > 0 && (goalMs <= 0 || ms >= goalMs * frac)).length;
+        return {
+          id: g.id, name: g.name || 'Group', color: g.color,
+          activeDays, steadiness: steadinessOf(daily),
+          weekTotals: weekRanges.map(r => r.reduce((a, d) => a + msOn(d), 0)),
+        };
+      });
+
     // --- RETROSPECTIVE view: "This Week in Review" summary (always rendered) ---
     const renderWeekInReview = (metrics) => {
       const banner = document.getElementById('weekly-review');
@@ -2231,48 +2355,62 @@
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
       const workingCount = Math.min(weekDates.length - 1, 6) || weekDates.length;
+      const workingDates = weekDates.slice(0, workingCount);
       const workingData = weekData.slice(0, workingCount);
-      const dailyGoalMs = getTotalDailyGoalH() * 3600000;
-      const studiedThresholdMs = dailyGoalMs / 3;
-      const daysStudied = workingData.filter(ms => ms > 0 && (dailyGoalMs <= 0 || ms >= studiedThresholdMs)).length;
+      // A day is "active" when it counts toward the streak — every lane cleared its
+      // share of its daily goal (see computeDayFloor), the same rule as Today.
+      const hist = dayHistory();
+      const dayActive = weekDates.map(d => hist.floorOn(d).met);
+      const daysStudied = dayActive.slice(0, workingCount).filter(Boolean).length;
 
-      const avgMs = metrics.totalTimeSpent / 6;
-      const mean = workingData.reduce((a, b) => a + b, 0) / (workingData.length || 1);
-      const variance = workingData.reduce((a, v) => a + (v - mean) ** 2, 0) / (workingData.length || 1);
-      const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
-      const maxCv = Math.sqrt(Math.max(workingData.length - 1, 1));
-      const steadiness = Math.round((1 - Math.min(cv / maxCv, 1)) * 100);
+      // Average over the days elapsed so far (today included), capped at the six
+      // working days — the 7th is rest — so midweek averages aren't diluted.
+      const avgDays = Math.min(weekDates.length, 6);
+      const avgMs = metrics.totalTimeSpent / avgDays;
+      const steadiness = steadinessOf(workingData);
 
       const today = new Date();
-      const dayTotals = {};
-      cachedTasks.forEach(task => {
-        for (const [d, ms] of Object.entries(task.timeSpentOnDay || {})) dayTotals[d] = (dayTotals[d] || 0) + ms;
-      });
-      const weekTotals = [];
-      const daysBack = (today.getDay() - weekStartDay + 7) % 7;
       const currentWeekStart = new Date(today);
-      currentWeekStart.setDate(today.getDate() - daysBack);
+      currentWeekStart.setDate(today.getDate() - (today.getDay() - weekStartDay + 7) % 7);
+      const weekRanges = [];
       for (let w = 3; w >= 0; w--) {
         const ws = new Date(currentWeekStart);
         ws.setDate(currentWeekStart.getDate() - w * 7);
         const we = new Date(ws);
         we.setDate(ws.getDate() + 6);
-        const range = getDatesInRange(toLocalDateStr(ws), toLocalDateStr(we));
-        let sum = 0;
-        range.forEach(d => { sum += dayTotals[d] || 0; });
-        weekTotals.push(sum);
+        weekRanges.push(getDatesInRange(toLocalDateStr(ws), toLocalDateStr(we)));
       }
+      const weekTotals = weekRanges.map(r => r.reduce((a, d) => a + (hist.dayTotals[d] || 0), 0));
       const trendHtml = weekTotals.map((ms, i) => {
         const h = (ms / 3600000).toFixed(1) + 'h';
         const isCurrent = i === weekTotals.length - 1;
         return `<span style="${isCurrent ? 'font-weight:700;color:var(--text-color,#fff)' : ''}">${h}</span>`;
       }).join(' <span style="color:var(--text-color-muted,#9e9e9e)">→</span> ');
 
+      // Per-lane breakdown: the same three measures, one row per lane. A lane-day is
+      // active when that lane cleared its share of its own daily goal (or, with no
+      // goal, had any time at all).
+      const frac = hist.frac;
+      const laneRows = computeLaneReview(loadGroups(), hist.dayLanes, workingDates, weekRanges, frac);
+      const lanesHtml = laneRows.length ? `
+        <div class="wr-lanes">
+          <div class="wr-lanes-title">By lane</div>
+          <div class="wr-lane wr-lane-head"><span>Lane</span><span class="wr-lane-num">Active</span><span class="wr-lane-num">Average</span><span class="wr-lane-num">Steadiness</span><span class="wr-lane-trend">4-week trend</span></div>
+          ${laneRows.map((r, i) => `
+            <div class="wr-lane">
+              <span class="wr-lane-name"><span class="wr-lane-dot" style="background:${r.color || groupColorForIndex(i)}"></span><span title="${escHtml(r.name)}">${escHtml(r.name)}</span></span>
+              <span class="wr-lane-num">${r.activeDays}/${workingCount}</span>
+              <span class="wr-lane-num">${formatTime(r.weekTotals[r.weekTotals.length - 1] / avgDays)}</span>
+              <span class="wr-lane-num">${r.steadiness == null ? '&mdash;' : r.steadiness + '%'}</span>
+              <span class="wr-lane-trend">${r.weekTotals.map((ms, j) => j === r.weekTotals.length - 1 ? `<b>${(ms / 3600000).toFixed(1)}h</b>` : (ms / 3600000).toFixed(1) + 'h').join(' → ')}</span>
+            </div>`).join('')}
+        </div>` : '';
+
       const dayTilesHtml = weekDates.map((d, i) => {
         const dt = new Date(d + 'T00:00:00');
         const name = dayNames[dt.getDay()];
         const isRest = i === weekDates.length - 1;
-        const studied = weekData[i] > 0 && (dailyGoalMs <= 0 || weekData[i] >= studiedThresholdMs);
+        const studied = dayActive[i];
         const cls = isRest ? 'rest' : (studied ? 'studied' : 'missed');
         return `<div class="wr-day ${cls}" title="${formatTime(weekData[i])}">${name}</div>`;
       }).join('');
@@ -2282,7 +2420,7 @@
         <div class="wr-days">${dayTilesHtml}</div>
         <div class="weekly-review-grid">
           <div class="wr-stat">
-            <div class="wr-stat-value">${daysStudied}<span style="font-size:0.9rem;font-weight:400">/6</span></div>
+            <div class="wr-stat-value">${daysStudied}<span style="font-size:0.9rem;font-weight:400">/${workingCount}</span></div>
             <div class="wr-stat-label">Active days</div>
           </div>
           <div class="wr-stat">
@@ -2290,7 +2428,7 @@
             <div class="wr-stat-label">Daily average</div>
           </div>
           <div class="wr-stat">
-            <div class="wr-stat-value">${steadiness}%</div>
+            <div class="wr-stat-value">${steadiness == null ? '&mdash;' : steadiness + '%'}</div>
             <div class="wr-stat-label">Steadiness</div>
           </div>
         </div>
@@ -2298,6 +2436,7 @@
           <div style="font-size:0.85rem;">${trendHtml}</div>
           <div class="wr-stat-label">4-week trend</div>
         </div>
+        ${lanesHtml}
       `;
       banner.classList.add('visible');
     };
@@ -2947,6 +3086,10 @@
     window.resolveTrackingMode = resolveTrackingMode;
     window.computeRunway = computeRunway;
     window.computeGoalBar = computeGoalBar;
+    window.computeDayFloor = computeDayFloor;
+    window.computeLaneReview = computeLaneReview;
+    window.steadinessOf = steadinessOf;
+    window.renderWeekInReview = renderWeekInReview;
     window.blockAtTime = blockAtTime;
     window.previousBlock = previousBlock;
     window.isColdStart = isColdStart;
