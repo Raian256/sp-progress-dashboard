@@ -46,6 +46,8 @@ The screenshots above are the gist. The rest — goal met, day over, an unplanne
 
 Download the latest [release](https://github.com/Raian256/sp-progress-dashboard/releases), then in Super Productivity go to **Settings → Plugins → Load Plugin from Folder** and pick the zip.
 
+Your groups, goals, work blocks and preferences travel with Super Productivity's own sync, so every synced device shows the same setup. (On first rollout, open the dashboard first on the device whose setup you want to keep.) Without sync, **Settings → Sync & backup** exports them as text you can paste into Import on another device.
+
 ---
 
 Everything runs inside Super Productivity as a single self-contained file, with no external dependencies. Development and build notes live in [`CLAUDE.md`](CLAUDE.md).

@@ -87,6 +87,18 @@ try {
   console.warn("[sp-dashboard plugin] CURRENT_TASK_CHANGE hook unavailable:", err);
 }
 
+// Synced plugin data changed (a remote sync delivery, or our own write). Tell the
+// iframe to re-read its settings; it ignores the echo of its own writes.
+try {
+  if (PluginAPI.Hooks && PluginAPI.Hooks.PERSISTED_DATA_CHANGED) {
+    PluginAPI.registerHook(PluginAPI.Hooks.PERSISTED_DATA_CHANGED, () => {
+      postToDashboard({ type: 'SP_SETTINGS_CHANGED' });
+    });
+  }
+} catch (err) {
+  console.warn("[sp-dashboard plugin] PERSISTED_DATA_CHANGED hook unavailable:", err);
+}
+
 window.addEventListener('message', (event) => {
   if (!event.data) return;
   const src = event.source;

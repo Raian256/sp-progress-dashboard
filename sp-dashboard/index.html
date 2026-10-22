@@ -292,6 +292,7 @@
     .btn-primary { background: var(--c-primary, #03a9f4); color: #fff; border: none; border-radius: var(--card-border-radius, 8px); padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; margin-top: 0.5rem; }
 
     /* --- DIAGNOSTICS (Settings view) --- */
+    #settings-io { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 0.7rem; }
     .diag-results { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; }
     .diag-row { display: flex; align-items: baseline; gap: 0.6rem; font-size: 0.82rem; line-height: 1.4; }
     .diag-icon { flex: 0 0 auto; width: 1.05rem; text-align: center; font-weight: 700; }
@@ -707,6 +708,15 @@
         </div>
 
         <div class="project-hours-section">
+          <h3 class="section-title">Sync &amp; backup</h3>
+          <div class="modal-section-title" id="settings-sync-status"></div>
+          <textarea id="settings-io" rows="3" spellcheck="false" placeholder="Paste exported settings here, then Import"></textarea>
+          <button class="btn-primary" id="settings-export-btn">Export</button>
+          <button class="btn-primary" id="settings-import-btn">Import</button>
+          <div class="modal-section-title" id="settings-io-msg"></div>
+        </div>
+
+        <div class="project-hours-section">
           <h3 class="section-title">Diagnostics</h3>
           <div class="modal-section-title">Check the plugin's connection to Super Productivity</div>
           <button class="btn-primary" id="run-diag-btn">Run diagnostics</button>
@@ -757,6 +767,91 @@
     // --- INITIALIZE UI ---
     const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
+    // --- SETTINGS SYNC ---
+    // Settings stay in localStorage (every read is synchronous) and are mirrored as one
+    // JSON blob into the host's synced plugin data (persistDataSynced/loadSyncedData),
+    // so Super Productivity's own sync carries them between devices. Conflicts resolve
+    // last-writer-wins on `updatedAt`, which only user edits bump (via setSetting) —
+    // defaults seeded on a fresh device keep stamp 0 and never outrank a configured
+    // one. Per-device UI state (active tab, open panels) is deliberately not synced.
+    const SETTINGS_FORMAT = 'sp-dashboard-settings';
+    const SYNCED_KEYS = ['groups', 'blocks', 'goal-history', 'week-start-day', 'day-floor-frac',
+      'chart-unit', 'chart-display', 'chart-count-days', 'chart-count-weeks', 'chart-count-months']
+      .map(k => 'sp-dashboard-' + k);
+    const SETTINGS_STAMP_KEY = 'sp-dashboard-settings-updated-at';
+    const settingsStamp = () => parseInt(localStorage.getItem(SETTINGS_STAMP_KEY), 10) || 0;
+    const syncApi = () => {
+      const api = window.PluginAPI;
+      return api && typeof api.loadSyncedData === 'function' && typeof api.persistDataSynced === 'function' ? api : null;
+    };
+    let settingsSyncReady = false;   // no pushes until the first pull has compared stamps
+    let settingsSyncError = null;
+    let settingsPushTimer = null;
+    const snapshotSettings = () => {
+      const values = {};
+      SYNCED_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) values[k] = v; });
+      return { format: SETTINGS_FORMAT, version: 1, updatedAt: settingsStamp(), values };
+    };
+    // Validate an exported/synced snapshot (string or object); throws a readable reason.
+    const parseSettingsSnapshot = (input) => {
+      const snap = typeof input === 'string' ? JSON.parse(input) : input;
+      if (!snap || snap.format !== SETTINGS_FORMAT || !snap.values || typeof snap.values !== 'object') {
+        throw new Error('not a Progress Dashboard settings export');
+      }
+      const values = {};
+      for (const k of SYNCED_KEYS) {
+        const v = snap.values[k];
+        if (v == null) continue;
+        if (typeof v !== 'string') throw new Error(k + ' is not a string');
+        if (/groups|blocks|history/.test(k) && !Array.isArray(JSON.parse(v))) throw new Error(k + ' is not a list');
+        values[k] = v;
+      }
+      return { updatedAt: Number(snap.updatedAt) || 0, values };
+    };
+    const pushSettings = async () => {
+      const api = syncApi();
+      if (!api || !settingsSyncReady) return;
+      try {
+        await api.persistDataSynced(JSON.stringify(snapshotSettings()), 'settings');
+        settingsSyncError = null;
+      } catch (e) { settingsSyncError = (e && e.message) || String(e); }
+    };
+    // Mark the settings as edited now and push them (debounced: a burst of edits = one write).
+    const touchSettings = () => {
+      localStorage.setItem(SETTINGS_STAMP_KEY, String(Date.now()));
+      clearTimeout(settingsPushTimer);
+      settingsPushTimer = setTimeout(pushSettings, 1000);
+    };
+    const setSetting = (k, v) => { localStorage.setItem(k, v); touchSettings(); };
+    const applySettings = (values, stamp) => {
+      Object.entries(values).forEach(([k, v]) => localStorage.setItem(k, v));
+      localStorage.setItem(SETTINGS_STAMP_KEY, String(stamp));
+    };
+    // Reconcile with the synced copy. Resolves true when remote settings were applied
+    // locally (the caller re-renders). An empty remote is seeded only from a device that
+    // has real config (edited, or has lanes), so a fresh install can't push defaults.
+    const pullSettings = async () => {
+      const api = syncApi();
+      if (!api) return false;
+      try {
+        const raw = await api.loadSyncedData('settings');
+        settingsSyncReady = true;
+        settingsSyncError = null;
+        const local = settingsStamp();
+        if (!raw) {
+          if (local || JSON.parse(localStorage.getItem('sp-dashboard-groups') || '[]').length) {
+            if (!local) localStorage.setItem(SETTINGS_STAMP_KEY, String(Date.now()));
+            await pushSettings();
+          }
+          return false;
+        }
+        const remote = parseSettingsSnapshot(raw);
+        if (remote.updatedAt > local) { applySettings(remote.values, remote.updatedAt); return true; }
+        if (remote.updatedAt < local) await pushSettings();
+      } catch (e) { settingsSyncError = (e && e.message) || String(e); }
+      return false;
+    };
+
     // The fraction of the daily goal a day must clear to "count" toward the streak
     // and tree. User-configurable in Settings; defaults to 0.3. Clamped to a sane band.
     const getDayFloorFrac = () => {
@@ -766,24 +861,21 @@
     };
 
     const weekStartDaySelect = document.getElementById('week-start-day');
-    const savedWeekStartDay = localStorage.getItem('sp-dashboard-week-start-day');
-    if (savedWeekStartDay) weekStartDaySelect.value = savedWeekStartDay;
 
     weekStartDaySelect.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-week-start-day', weekStartDaySelect.value);
+      setSetting('sp-dashboard-week-start-day', weekStartDaySelect.value);
       processData(cachedTasks, cachedProjects);
     });
 
     // "A day counts at X% of the daily goal" — stored as a fraction (0.3 = 30%).
     const dayFloorInput = document.getElementById('day-floor-pct');
     if (dayFloorInput) {
-      dayFloorInput.value = Math.round(getDayFloorFrac() * 100);
       dayFloorInput.addEventListener('change', () => {
         let pct = parseInt(dayFloorInput.value, 10);
         if (!Number.isFinite(pct)) pct = 30;
         pct = Math.min(Math.max(pct, 5), 100);
         dayFloorInput.value = pct;
-        localStorage.setItem('sp-dashboard-day-floor-frac', String(pct / 100));
+        setSetting('sp-dashboard-day-floor-frac', String(pct / 100));
         processData(cachedTasks, cachedProjects);
       });
     }
@@ -810,19 +902,26 @@
       barChartCountInput.value = String(getSavedChartCount(u));
       barChartCountInput.max = String(CHART_COUNT_MAX[u] || 365);
     };
-    const savedUnit = localStorage.getItem('sp-dashboard-chart-unit');
-    if (savedUnit && CHART_COUNT_DEFAULTS[savedUnit] != null) barChartUnit.value = savedUnit;
-    const savedDisplay = localStorage.getItem('sp-dashboard-chart-display');
-    if (savedDisplay === 'bars' || savedDisplay === 'curve') barChartDisplay.value = savedDisplay;
-    syncChartCountInput();
+    // Load the stored preferences into their controls (at boot, and after a sync/import).
+    const refreshSettingsControls = () => {
+      const savedWeekStartDay = localStorage.getItem('sp-dashboard-week-start-day');
+      if (savedWeekStartDay) weekStartDaySelect.value = savedWeekStartDay;
+      if (dayFloorInput) dayFloorInput.value = Math.round(getDayFloorFrac() * 100);
+      const savedUnit = localStorage.getItem('sp-dashboard-chart-unit');
+      if (savedUnit && CHART_COUNT_DEFAULTS[savedUnit] != null) barChartUnit.value = savedUnit;
+      const savedDisplay = localStorage.getItem('sp-dashboard-chart-display');
+      if (savedDisplay === 'bars' || savedDisplay === 'curve') barChartDisplay.value = savedDisplay;
+      syncChartCountInput();
+    };
+    refreshSettingsControls();
 
     barChartUnit.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-chart-unit', barChartUnit.value);
+      setSetting('sp-dashboard-chart-unit', barChartUnit.value);
       syncChartCountInput();
       updateBarChart();
     });
     barChartDisplay.addEventListener('change', () => {
-      localStorage.setItem('sp-dashboard-chart-display', barChartDisplay.value);
+      setSetting('sp-dashboard-chart-display', barChartDisplay.value);
       updateBarChart();
     });
     barChartCountInput.addEventListener('change', () => {
@@ -832,7 +931,7 @@
       if (n < 1) n = 1;
       if (n > max) n = max;
       barChartCountInput.value = String(n);
-      localStorage.setItem('sp-dashboard-chart-count-' + u, String(n));
+      setSetting('sp-dashboard-chart-count-' + u, String(n));
       updateBarChart();
     });
 
@@ -884,7 +983,7 @@
       // When Retrospective becomes visible its containers finally have real
       // width, so re-render the charts that depend on measured dimensions.
       if (active === 'retro') { try { updateBarChart(); renderHeatmap(); } catch (e) {} }
-      if (active === 'settings') { try { renderGroupsSettings(); renderBlocksSettings(); } catch (e) {} }
+      if (active === 'settings') { try { renderGroupsSettings(); renderBlocksSettings(); renderSettingsSync(); } catch (e) {} }
     };
     document.getElementById('tab-today').addEventListener('click', () => setActiveView('today'));
     document.getElementById('tab-retro').addEventListener('click', () => setActiveView('retro'));
@@ -944,7 +1043,7 @@
     const loadGroups = () => {
       try { return JSON.parse(localStorage.getItem('sp-dashboard-groups') || '[]'); } catch { return []; }
     };
-    const saveGroups = (g) => localStorage.setItem('sp-dashboard-groups', JSON.stringify(g));
+    const saveGroups = (g) => setSetting('sp-dashboard-groups', JSON.stringify(g));
     const genGroupId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
     const getTotalWeeklyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.weeklyGoalH) || 0), 0);
     const getTotalDailyGoalH = () => loadGroups().reduce((s, g) => s + (parseFloat(g.dailyGoalH) || 0), 0);
@@ -969,7 +1068,7 @@
     };
     const normalizeBlocks = (arr) => (Array.isArray(arr) ? arr : [])
       .map(sanitizeBlock).filter(b => b.end > b.start).sort((a, b) => a.start - b.start);
-    const saveBlocks = (b) => localStorage.setItem(BLOCKS_KEY, JSON.stringify(b));
+    const saveBlocks = (b) => setSetting(BLOCKS_KEY, JSON.stringify(b));
     const loadBlocks = () => {
       const raw = localStorage.getItem(BLOCKS_KEY);
       if (raw !== null) { try { return normalizeBlocks(JSON.parse(raw)); } catch { return []; } }
@@ -980,7 +1079,7 @@
         ? [{ id: genBlockId(), label: 'Day', start: 6, end: parseInt(legacy, 10), intensity: 'hard' }]
         : DEFAULT_BLOCKS.map(b => ({ ...b }));
       const norm = normalizeBlocks(seeded);
-      saveBlocks(norm);
+      localStorage.setItem(BLOCKS_KEY, JSON.stringify(norm));   // a seed, not an edit: unstamped
       return norm;
     };
     const getLastBlockEndHour = () => { const bl = loadBlocks(); return bl.length ? bl[bl.length - 1].end : null; };
@@ -2225,6 +2324,42 @@
       if (latestMetrics) { renderTodayView(latestMetrics); renderWindDownBanner(); }
     });
 
+    // --- SYNC & BACKUP (Settings view) -------------------------------------
+    const settingsSyncStatus = () => !syncApi()
+      ? 'Sync unavailable here — copy settings between devices with Export / Import.'
+      : settingsSyncError ? 'Sync error: ' + settingsSyncError + ' — Export / Import still works.'
+      : 'Synced across devices by Super Productivity’s own sync. Export / Import is a manual backup.';
+    const renderSettingsSync = () => {
+      const el = document.getElementById('settings-sync-status');
+      if (el) el.textContent = settingsSyncStatus();
+    };
+    renderSettingsSync();
+    // Settings changed underneath us (remote sync or import): reload controls and redraw.
+    const reloadSettings = () => {
+      refreshSettingsControls();
+      processData(cachedTasks, cachedProjects);
+      if (!document.getElementById('view-settings').classList.contains('hidden')) {
+        renderGroupsSettings(); renderBlocksSettings(); renderSettingsSync();
+      }
+    };
+    const settingsIo = document.getElementById('settings-io');
+    const settingsIoMsg = (t) => { document.getElementById('settings-io-msg').textContent = t; };
+    document.getElementById('settings-export-btn').addEventListener('click', async () => {
+      settingsIo.value = JSON.stringify(snapshotSettings());
+      settingsIo.select();
+      try { await navigator.clipboard.writeText(settingsIo.value); settingsIoMsg('Copied to the clipboard — paste it into Import on the other device.'); }
+      catch { settingsIoMsg('Copy the selected text above, then paste it into Import on the other device.'); }
+    });
+    document.getElementById('settings-import-btn').addEventListener('click', () => {
+      let snap;
+      try { snap = parseSettingsSnapshot(settingsIo.value.trim()); }
+      catch (e) { settingsIoMsg('Nothing imported: ' + ((e && e.message) || e) + '.'); return; }
+      applySettings(snap.values, Date.now());
+      touchSettings();   // the import is an edit here: it propagates to synced devices
+      reloadSettings();
+      settingsIoMsg('Imported ' + Object.keys(snap.values).length + ' settings.');
+    });
+
     // --- DIAGNOSTICS (Settings view) ---------------------------------------
     // A self-check the user can run to see the plugin's link to Super
     // Productivity: host connection, each data permission the manifest asks for,
@@ -2332,6 +2467,7 @@
       } catch (e) {
         fail('Settings storage', 'localStorage unavailable: ' + ((e && e.message) || e) + '. Settings will reset on reload.');
       }
+      (syncApi() && !settingsSyncError ? ok : warn)('Settings sync', settingsSyncStatus());
 
       // 7. Configuration — groups and work blocks drive goals and the runway.
       const groups = loadGroups();
@@ -2934,7 +3070,7 @@
             color: groupColorForIndex(0)
           }]);
         } else {
-          saveGroups([]);
+          localStorage.setItem('sp-dashboard-groups', '[]');   // a seed, not an edit: unstamped
         }
       }
       // Compute "this week" range based on the week-start-day selector
@@ -2996,20 +3132,8 @@
       const countedOverdue = new Set();
       tasksArr.forEach(task => {
         const keys = Object.keys(task.timeSpentOnDay || {});
-        const overlap = keys.filter(k => dateRange.includes(k));
         // compute normalized due bounds (start of day / end of day)
         const { dueStart, dueEnd } = getDueBounds(task);
-        if (!dueStart && !task.isDone) {
-          console.log("[sp-dashboard] task missing dueDay and not done, full object:", task);
-        }
-        // diagnostic info
-        console.log("[sp-dashboard] processing task", task.id, task.title,
-                    "dueDay", task.dueDay,
-                    "dueStartUTC", dueStart !== null ? new Date(dueStart).toISOString() : null,
-                    "dueEndUTC", dueEnd !== null ? new Date(dueEnd).toISOString() : null,
-                    "nowUTC", new Date(now).toISOString(),
-                    "isDone", task.isDone, "doneOnUTC", task.doneOn ? new Date(task.doneOn).toISOString() : null,
-                    "timeSpentOnDay keys", keys, "inRange", overlap);
         let taskTimeInRange = 0;
         const pName = task.projectId && projectMap[task.projectId] 
             ? projectMap[task.projectId] 
@@ -3111,24 +3235,6 @@
         return cnt + ((!t.isDone && !dueStart) ? 1 : 0);
       }, 0);
       
-      // Diagnostic: log all done tasks and final tally
-      const doneTasks = tasksArr.filter(t => t.isDone);
-      const doneWithoutTimestamp = doneTasks.filter(t => !t.doneOn);
-      console.log("[sp-dashboard] FINAL METRICS: totalCompleted=", metrics.totalCompleted, "totalTasks=", metrics.totalTasks);
-      console.log("[sp-dashboard] Done tasks in array (count=" + doneTasks.length + "):", doneTasks.map(t => ({ id: t.id, title: t.title, doneOn: t.doneOn })));
-      if (doneWithoutTimestamp.length > 0) {
-        console.warn("[sp-dashboard] WARNING: done tasks missing doneOn timestamp:", doneWithoutTimestamp.map(t => ({ id: t.id, title: t.title })));
-      }
-      
-      // report any overdue tasks that had no time entries (might explain zero stats)
-      const overdueNoTime = tasksArr.filter(t => {
-        const keys = Object.keys(t.timeSpentOnDay || {});
-        const { dueStart, dueEnd } = getDueBounds(t);
-        return (!t.isDone && dueStart !== null && dueEnd < rangeEndTime && keys.length === 0);
-      }).map(t => t.id);
-      if (overdueNoTime.length) {
-        console.log("[sp-dashboard] overdue tasks with no time entries", overdueNoTime);
-      }
       updateDashboardUI(metrics);
     };
 
@@ -3170,6 +3276,10 @@
     window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
     window.runDiagnostics = runDiagnostics;
+    window.snapshotSettings = snapshotSettings;
+    window.parseSettingsSnapshot = parseSettingsSnapshot;
+    window.pullSettings = pullSettings;
+    window.setSetting = setSetting;
 
     // --- SP INTEGRATION / NATIVE IFRAME COMMS ---
     const pullDataFromSP = async () => {
@@ -3178,37 +3288,15 @@
         if (window.PluginAPI) {
           const activeTasks = await window.PluginAPI.getTasks() || [];
           console.log("[sp-dashboard] received activeTasks count", activeTasks.length);
-          const activeTasksDone = activeTasks.filter(t => t.isDone);
-          console.log("[sp-dashboard] activeTasks done:", JSON.stringify(activeTasksDone.map(t => ({ id: t.id, title: t.title, doneOn: t.doneOn })), null, 2));
-          
           const archivedTasks = await window.PluginAPI.getArchivedTasks() || [];
           console.log("[sp-dashboard] received archivedTasks count", archivedTasks.length);
-          const archivedTasksDone = archivedTasks.filter(t => t.isDone);
-          console.log("[sp-dashboard] archivedTasks done:", JSON.stringify(archivedTasksDone.map(t => ({ id: t.id, title: t.title, doneOn: t.doneOn })), null, 2));
-          
-          // Deduplicate tasks: use Map to ensure each task ID appears only once
-          // Active tasks take precedence over archived (appear later in spread, so overwrite)
+
+          // Deduplicate tasks by ID; active tasks take precedence over archived (set later, so overwrite)
           const taskMap = new Map();
-          const duplicateIds = new Set();
-          archivedTasks.forEach(task => {
-            if (taskMap.has(task.id)) {
-              duplicateIds.add(task.id);
-            }
-            taskMap.set(task.id, task);
-          });
-          activeTasks.forEach(task => {
-            if (taskMap.has(task.id)) {
-              duplicateIds.add(task.id);
-            }
-            taskMap.set(task.id, task);
-          });
+          archivedTasks.forEach(task => taskMap.set(task.id, task));
+          activeTasks.forEach(task => taskMap.set(task.id, task));
           cachedTasks = Array.from(taskMap.values());
           console.log("[sp-dashboard] after deduplication, unique tasks count", cachedTasks.length);
-          if (duplicateIds.size > 0) {
-            console.log("[sp-dashboard] duplicate task IDs found:", Array.from(duplicateIds));
-          }
-          const finalDoneCount = cachedTasks.filter(t => t.isDone).length;
-          console.log("[sp-dashboard] final cachedTasks done count:", finalDoneCount);
           cachedProjects = await window.PluginAPI.getAllProjects() || [];
           console.log("[sp-dashboard] received projects count", cachedProjects.length);
           updateTrackingFallback(cachedTasks);
@@ -3230,6 +3318,9 @@
       }
       if (event.data && event.data.type === 'SP_STATE_CHANGED') {
         pullDataFromSP();
+      } else if (event.data && event.data.type === 'SP_SETTINGS_CHANGED') {
+        // The host's PERSISTED_DATA_CHANGED hook: a sync may have delivered new settings.
+        pullSettings().then(changed => { if (changed) reloadSettings(); });
       } else if (event.data && event.data.type === 'SP_TRACKING_CHANGED') {
         // The host's CURRENT_TASK_CHANGE hook: authoritative start/switch/stop.
         trackingViaHook = true;
@@ -3248,7 +3339,7 @@
     // action fires (e.g. a running timer just ticking up over time).
     setInterval(() => {
       if (window.PluginAPI) {
-        pullDataFromSP();
+        pullSettings().then(changed => { if (changed) reloadSettings(); pullDataFromSP(); });
       }
     }, 60000);
 
@@ -3261,7 +3352,12 @@
         // iframe existed. Ask it for the current tracking state so we start in
         // Focus mode instead of Idle; it replies via SP_TRACKING_CHANGED.
         try { window.parent.postMessage({ type: 'SP_REQUEST_TRACKING' }, '*'); } catch (e) {}
-        pullDataFromSP();
+        // Reconcile settings with the synced copy first, so the first render uses them.
+        pullSettings().then(changed => {
+          if (changed) refreshSettingsControls();
+          renderSettingsSync();
+          pullDataFromSP();
+        });
       } else {
         console.log("[sp-dashboard] No PluginAPI detected. Loading mock data...");
 

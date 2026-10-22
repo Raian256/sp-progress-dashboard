@@ -11,7 +11,8 @@
   "sidePanel": false,
   "hooks": [
     "action",
-    "currentTaskChange"
+    "currentTaskChange",
+    "persistedDataChanged"
   ],
   "permissions": [
     "getTasks",

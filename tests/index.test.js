@@ -763,4 +763,89 @@ describe('Progress Dashboard UI', () => {
 
 
   });
+
+  describe('Settings sync & backup', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => { delete window.PluginAPI; });
+
+    const mockApi = (stored) => {
+      const api = {
+        stored,
+        loadSyncedData: vi.fn(async () => api.stored),
+        persistDataSynced: vi.fn(async (data) => { api.stored = data; }),
+      };
+      window.PluginAPI = api;
+      return api;
+    };
+    const remoteWith = (updatedAt, groups) => JSON.stringify({
+      format: 'sp-dashboard-settings', version: 1, updatedAt,
+      values: { 'sp-dashboard-groups': JSON.stringify(groups), 'sp-dashboard-week-start-day': '0' },
+    });
+
+    it('round-trips a snapshot and rejects foreign or malformed input', () => {
+      window.saveGroups([{ id: 'g1', name: 'CS', weeklyGoalH: 10, dailyGoalH: 2, projectIds: ['p1'] }]);
+      localStorage.setItem('sp-dashboard-active-view', 'retro');   // per-device, not exported
+      const snap = window.snapshotSettings();
+      expect(snap.updatedAt).toBeGreaterThan(0);
+      expect(snap.values['sp-dashboard-active-view']).toBeUndefined();
+      const parsed = window.parseSettingsSnapshot(JSON.stringify(snap));
+      expect(JSON.parse(parsed.values['sp-dashboard-groups'])[0].name).toBe('CS');
+
+      expect(() => window.parseSettingsSnapshot('{"foo":1}')).toThrow(/not a Progress Dashboard/);
+      expect(() => window.parseSettingsSnapshot('not json')).toThrow();
+      expect(() => window.parseSettingsSnapshot(JSON.stringify({
+        format: 'sp-dashboard-settings', values: { 'sp-dashboard-groups': '{"a":1}' },
+      }))).toThrow(/not a list/);
+    });
+
+    it('a fresh device adopts the synced settings and never pushes its defaults', async () => {
+      window.loadBlocks();   // seeds default blocks, unstamped
+      const api = mockApi(remoteWith(1000, [{ id: 'g-r', name: 'Remote' }]));
+      expect(await window.pullSettings()).toBe(true);
+      expect(window.loadGroups()[0].name).toBe('Remote');
+      expect(localStorage.getItem('sp-dashboard-week-start-day')).toBe('0');
+      expect(api.persistDataSynced).not.toHaveBeenCalled();
+    });
+
+    it('a newer local edit wins and is pushed; an older one is overwritten', async () => {
+      window.saveGroups([{ id: 'g-l', name: 'Local' }]);   // stamped now (> 1000)
+      const api = mockApi(remoteWith(1000, [{ id: 'g-r', name: 'Remote' }]));
+      expect(await window.pullSettings()).toBe(false);
+      expect(window.loadGroups()[0].name).toBe('Local');
+      expect(JSON.parse(api.stored).values['sp-dashboard-groups']).toContain('Local');
+
+      api.stored = remoteWith(Date.now() + 60000, [{ id: 'g-r', name: 'Remote' }]);
+      expect(await window.pullSettings()).toBe(true);
+      expect(window.loadGroups()[0].name).toBe('Remote');
+    });
+
+    it('seeds an empty synced store only from a configured device', async () => {
+      window.loadBlocks();
+      const api = mockApi(null);
+      await window.pullSettings();
+      expect(api.persistDataSynced).not.toHaveBeenCalled();
+
+      localStorage.setItem('sp-dashboard-groups', JSON.stringify([{ id: 'g', name: 'Pre-sync lane' }]));
+      await window.pullSettings();
+      expect(api.persistDataSynced).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(api.stored).updatedAt).toBeGreaterThan(0);
+    });
+
+    it('Import applies pasted settings and Export emits them', () => {
+      const io = document.getElementById('settings-io');
+      io.value = remoteWith(5, [{ id: 'g-i', name: 'Imported', weeklyGoalH: 3, dailyGoalH: 1, projectIds: [] }]);
+      document.getElementById('settings-import-btn').click();
+      expect(window.loadGroups()[0].name).toBe('Imported');
+      expect(document.getElementById('week-start-day').value).toBe('0');
+      expect(document.getElementById('settings-io-msg').textContent).toMatch(/Imported 2 settings/);
+
+      io.value = 'garbage';
+      document.getElementById('settings-import-btn').click();
+      expect(document.getElementById('settings-io-msg').textContent).toMatch(/Nothing imported/);
+      expect(window.loadGroups()[0].name).toBe('Imported');
+
+      document.getElementById('settings-export-btn').click();
+      expect(window.parseSettingsSnapshot(io.value).values['sp-dashboard-groups']).toContain('Imported');
+    });
+  });
 });
