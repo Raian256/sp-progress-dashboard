@@ -152,6 +152,36 @@ describe('Progress Dashboard UI', () => {
       window.processData(deduplicatedTasks, []);
       expect(deduplicatedTasks.length).toBe(1);
     });
+
+    it('tasksForTime drops subtasks whose parent is present but keeps orphans', () => {
+      const tasks = [
+        { id: 'p', parentId: null },
+        { id: 'a', parentId: 'p' },
+        { id: 'b', parentId: 'p' },
+        { id: 'orphan', parentId: 'gone' },
+      ];
+      expect(window.tasksForTime(tasks).map(t => t.id)).toEqual(['p', 'orphan']);
+    });
+
+    it('does not double-count subtask time (parent already rolls it up)', () => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      // SP sums subtask time into the parent's timeSpentOnDay and returns both in
+      // the flat task list. Real work here is 2h, a naive sum would show 4h.
+      const tasks = [
+        { id: 'p', parentId: null, title: 'Parent', isDone: false, projectId: 'p1',
+          timeSpentOnDay: { [todayStr]: 7200000 } },            // 2h roll-up
+        { id: 's1', parentId: 'p', title: 'Sub 1', isDone: false, projectId: 'p1',
+          timeSpentOnDay: { [todayStr]: 5400000 } },            // 1.5h
+        { id: 's2', parentId: 'p', title: 'Sub 2', isDone: false, projectId: 'p1',
+          timeSpentOnDay: { [todayStr]: 1800000 } },            // 0.5h
+      ];
+      // Afternoon block so 0m-threshold aside, the Launchpad renders the totals.
+      const d = new Date(); d.setHours(17, 0, 0, 0); vi.setSystemTime(d);
+      window.processData(tasks, [{ id: 'p1', title: 'Test Project' }]);
+      const runway = document.getElementById('runway').textContent;
+      expect(runway).toContain('2h 0m worked today');
+      expect(runway).toContain('2h 0m this week');
+    });
   });
 
   describe('Project Groups', () => {

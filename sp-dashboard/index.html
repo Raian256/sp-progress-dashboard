@@ -764,6 +764,19 @@
     let cachedProjects = [];
     let latestMetrics = null;
 
+    // Super Productivity rolls every parent task's timeSpentOnDay up to the
+    // per-day sum of its subtasks' time, and getTasks() returns parents and
+    // subtasks together as one flat list. Summing all of them would count each
+    // subtask's minutes twice — once on the subtask, once on the rolled-up
+    // parent. So for any time total we drop a subtask whose parent is present
+    // (the parent already carries its time). A subtask whose parent is missing
+    // from the data is kept, so its time is never silently lost.
+    const tasksForTime = (tasks) => {
+      const list = tasks || [];
+      const ids = new Set(list.map(t => t.id));
+      return list.filter(t => !(t.parentId && ids.has(t.parentId)));
+    };
+
     // --- INITIALIZE UI ---
     const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
@@ -1775,7 +1788,7 @@
       };
       const configOn = (ds) => (ds >= todayStr ? cur : goalConfigOn(history, ds));
       const dayTotals = {}, dayLanes = {};
-      cachedTasks.forEach(t => {
+      tasksForTime(cachedTasks).forEach(t => {
         for (const [d, ms] of Object.entries(t.timeSpentOnDay || {})) {
           dayTotals[d] = (dayTotals[d] || 0) + ms;
           const gid = t.projectId && groupOfFor(configOn(d))[t.projectId];
@@ -2158,7 +2171,7 @@
         if (!p.isHiddenFromMenu) { projectMap[p.id] = p.title; activeProjectIds.add(p.id); }
       });
       const totals = {};
-      cachedTasks.forEach(task => {
+      tasksForTime(cachedTasks).forEach(task => {
         if (task.projectId && !activeProjectIds.has(task.projectId)) return;
         const pName = task.projectId && projectMap[task.projectId] ? projectMap[task.projectId] : 'Uncategorized';
         for (const ms of Object.values(task.timeSpentOnDay || {})) totals[pName] = (totals[pName] || 0) + ms;
@@ -2669,7 +2682,7 @@
 
       // Build a flat map of date -> total ms from all tasks (including hidden projects)
       const dayTotals = {};
-      cachedTasks.forEach(task => {
+      tasksForTime(cachedTasks).forEach(task => {
         const entries = task.timeSpentOnDay || {};
         for (const [date, ms] of Object.entries(entries)) {
           dayTotals[date] = (dayTotals[date] || 0) + ms;
@@ -2966,7 +2979,7 @@
 
       // Flat map of date -> total ms across all tasks (including hidden projects)
       const dayTotals = {};
-      cachedTasks.forEach(task => {
+      tasksForTime(cachedTasks).forEach(task => {
         const entries = task.timeSpentOnDay || {};
         for (const [date, ms] of Object.entries(entries)) {
           dayTotals[date] = (dayTotals[date] || 0) + ms;
@@ -3130,7 +3143,11 @@
       const rangeEndTime = new Date(dateToStr + "T23:59:59").getTime();
 
       const countedOverdue = new Set();
+      // Subtasks are excluded from time totals (their parent already carries the
+      // rolled-up sum); task counts below still consider every task.
+      const timeTaskIds = new Set(tasksForTime(tasksArr).map(t => t.id));
       tasksArr.forEach(task => {
+        const countsTime = timeTaskIds.has(task.id);
         const keys = Object.keys(task.timeSpentOnDay || {});
         // compute normalized due bounds (start of day / end of day)
         const { dueStart, dueEnd } = getDueBounds(task);
@@ -3166,9 +3183,9 @@
           const dayStart = new Date(dateStr + "T00:00:00").getTime();
           const dayEnd = dayStart + 86400000 - 1;
 
-          // Time Spent Logging
+          // Time Spent Logging (subtask time is skipped — see countsTime)
           const spentOnDate = task.timeSpentOnDay && task.timeSpentOnDay[dateStr];
-          if (spentOnDate) {
+          if (spentOnDate && countsTime) {
             metrics.weeklyData.data[index] += spentOnDate;
             taskTimeInRange += spentOnDate;
           }
@@ -3186,7 +3203,7 @@
         }
 
         // Tally today's and yesterday's time (always, regardless of selected period)
-        if (task.timeSpentOnDay) {
+        if (task.timeSpentOnDay && countsTime) {
           if (task.timeSpentOnDay[todayStr]) {
             metrics.todayTimeSpent += task.timeSpentOnDay[todayStr];
             metrics.projectTodayData[pName] = (metrics.projectTodayData[pName] || 0) + task.timeSpentOnDay[todayStr];
@@ -3275,6 +3292,7 @@
     window.loadBlocks = loadBlocks;
     window.saveBlocks = saveBlocks;
     window.renderTodayView = renderTodayView;
+    window.tasksForTime = tasksForTime;
     window.runDiagnostics = runDiagnostics;
     window.snapshotSettings = snapshotSettings;
     window.parseSettingsSnapshot = parseSettingsSnapshot;
